@@ -85,7 +85,7 @@ int   cWidth[] = { 30, 56, 50, 50 };
 char *cName[] = { "#", "Hits", "Des", "Abs" };
 
 #ifdef _DEBUG
-std::string appTitle = "MolFlow+ debug version (Compiled " __DATE__ " " __TIME__ ")";
+std::string appTitle = "MolFlow+ debug version of Rudolf (Compiled " __DATE__ " " __TIME__ ")";
 #else
 std::string appTitle = "Molflow+ " + appVersionName + " (" __DATE__ ")";
 #endif
