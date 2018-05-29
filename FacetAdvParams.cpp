@@ -1,5 +1,3 @@
-/*TEST*/
-/*TESTTEST*/
 /*
 Program:     MolFlow+ / Synrad+
 Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
