@@ -231,8 +231,14 @@ void PerformTeleport(SubprocessFacet *iFacet);
 void PerformTransparentPass(SubprocessFacet *iFacet);
 void UpdateHits(Dataport *dpHit, Dataport *dpLog, int prIdx, DWORD timeout);
 void UpdateLog(Dataport *dpLog, DWORD timeout);
+<<<<<<< HEAD
 void UpdateMCHits(Dataport *dpHit, int prIdx, size_t nbMoments, DWORD timeout);
 void UpdateACHits(Dataport *dpHit, int prIdx, DWORD timeout);
+=======
+void UpdateMCHits(Dataport *dpHit,int prIdx,size_t nbMoments,DWORD timeout);
+void AddOnetoA();
+void UpdateACHits(Dataport *dpHit,int prIdx,DWORD timeout);
+>>>>>>> 20f0988c17ca72bedce12ab8f3e8d7a84971eaf2
 void ResetTmpCounters();
 
 double GetTick();
