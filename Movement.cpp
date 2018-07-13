@@ -1,7 +1,9 @@
 /*
-File:        Movement.cpp
-Description: Define moving parts
-Program:     MolFlow
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -12,8 +14,9 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-*/
 
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #define XMODE 1
 #define YMODE 2
 #define ZMODE 3
@@ -196,10 +199,10 @@ Movement::Movement(Geometry *g,Worker *w):GLWindow() {
 		rxText, ryText, rzText,
 		rpmText, degText, hzText };
 
-	for (auto textField : group1){
+	for (auto& textField : group1){
 		textField->SetEditable(false);
 	}
-	for (auto textField : group2){
+	for (auto& textField : group2){
 		textField->SetEditable(false);
 	}
 
@@ -301,14 +304,14 @@ void Movement::ProcessMessage(GLComponent *src,int message) {
 			}
 			
 			if (mApp->AskToReset()) {
-				work->motionType = mode;
+				work->wp.motionType = mode;
 				switch (mode) {
 				case MODE_FIXED:
-					work->motionVector2 = AXIS_DIR;
+					work->wp.motionVector2 = AXIS_DIR;
 					break;
 				case MODE_ROTATING: 
-					work->motionVector1 = AXIS_P0;
-					work->motionVector2 = AXIS_DIR.Normalized() * (degPerSec / 180.0 * 3.14159);
+					work->wp.motionVector1 = AXIS_P0;
+					work->wp.motionVector2 = AXIS_DIR.Normalized() * (degPerSec / 180.0 * 3.14159);
 					break;
 				}
 
@@ -417,57 +420,57 @@ void Movement::UpdateToggle(GLComponent *src) {
 	checkBox2->SetState(src == checkBox2);
 	checkBox3->SetState(src == checkBox3);
 
-	for (auto textBox : group1) {
+	for (auto& textBox : group1) {
 		textBox->SetEditable(src == checkBox2);
 	}
 
-	for (auto textBox : group2) {
+	for (auto& textBox : group2) {
 		textBox->SetEditable(src == checkBox3);
 	}
 }
 
 void Movement::Update() {
 	
-	mode = work->motionType;
+	mode = work->wp.motionType;
 	
-	checkBox1->SetState(work->motionType == 0);
-	checkBox2->SetState(work->motionType == 1);
-	checkBox3->SetState(work->motionType == 2);
+	checkBox1->SetState(work->wp.motionType == 0);
+	checkBox2->SetState(work->wp.motionType == 1);
+	checkBox3->SetState(work->wp.motionType == 2);
 
-	if (work->motionType == 0) {
-		for (auto textBox : group1) {
+	if (work->wp.motionType == 0) {
+		for (auto& textBox : group1) {
 			textBox->SetText("0");
 		}
-		for (auto textBox : group2) {
+		for (auto& textBox : group2) {
 			textBox->SetText("0");
 		}
 	}
-	else if (work->motionType == 1) {
-		for (auto textBox : group1) {
+	else if (work->wp.motionType == 1) {
+		for (auto& textBox : group1) {
 			textBox->SetEditable(true);
 		}
-		for (auto textBox : group2) {
+		for (auto& textBox : group2) {
 			textBox->SetText("0");
 		}
-		vxText->SetText(work->motionVector2.x);
-		vyText->SetText(work->motionVector2.y);
-		vzText->SetText(work->motionVector2.z);
+		vxText->SetText(work->wp.motionVector2.x);
+		vyText->SetText(work->wp.motionVector2.y);
+		vzText->SetText(work->wp.motionVector2.z);
 	}
-	else if (work->motionType == 2) {
-		for (auto textBox : group1) {
+	else if (work->wp.motionType == 2) {
+		for (auto& textBox : group1) {
 			textBox->SetText("0");
 		}
-		for (auto textBox : group2) {
+		for (auto& textBox : group2) {
 			textBox->SetEditable(true);
 		}
-		axText->SetText(work->motionVector1.x);
-		ayText->SetText(work->motionVector1.y);
-		azText->SetText(work->motionVector1.z);
-		Vector3d rot = work->motionVector2.Normalized();
+		axText->SetText(work->wp.motionVector1.x);
+		ayText->SetText(work->wp.motionVector1.y);
+		azText->SetText(work->wp.motionVector1.z);
+		Vector3d rot = work->wp.motionVector2.Normalized();
 		rxText->SetText(rot.x);
 		ryText->SetText(rot.y);
 		rzText->SetText(rot.z);
-		double num=work->motionVector2.Norme()/3.14159*180.0;
+		double num=work->wp.motionVector2.Norme()/3.14159*180.0;
 		degText->SetText(num);
 		rpmText->SetText(num / 6);
 		hzText->SetText(num / 360);

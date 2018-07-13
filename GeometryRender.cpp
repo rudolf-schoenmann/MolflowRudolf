@@ -1,21 +1,22 @@
 /*
-  File:        GeometryRender.cpp
-  Description: Geometry class (OpenGL rendering/selection stuff)
-  Program:     MolFlow
-  Author:      R. KERSEVAN / J-L PONS / M ADY
-  Copyright:   E.S.R.F / CERN
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-  */
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #include "MolflowGeometry.h"
 #include "Worker.h"
 #include "Facet_shared.h"
@@ -41,7 +42,7 @@ extern MolFlow *mApp;
 extern SynRad*mApp;
 #endif
 
-void MolflowGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, bool renderDirectionTexture) {
+void MolflowGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, bool renderDirectionTexture,size_t sMode) {
 
 	GlobalHitBuffer *shGHit = (GlobalHitBuffer *)hits;
 
@@ -62,14 +63,14 @@ void MolflowGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, 
 
 	if (renderRegularTexture) {
 
-		switch (shGHit->sMode) {
+		switch (sMode) {
 
 		case MC_MODE:
 
-			dCoef_custom[0] = 1E4 / (double)shGHit->total.hit.nbDesorbed * mApp->worker.gasMass / 1000 / 6E23*0.0100; //multiplied by timecorr*sum_v_ort_per_area: pressure
-			dCoef_custom[1] = 1E4 / (double)shGHit->total.hit.nbDesorbed;
-			dCoef_custom[2] = 1E4 / (double)shGHit->total.hit.nbDesorbed;
-			timeCorrection = (mApp->worker.displayedMoment == 0) ? mApp->worker.finalOutgassingRate : mApp->worker.totalDesorbedMolecules / mApp->worker.timeWindowSize;
+			dCoef_custom[0] = 1E4 / (double)shGHit->globalHits.hit.nbDesorbed * mApp->worker.wp.gasMass / 1000 / 6E23*0.0100; //multiplied by timecorr*sum_v_ort_per_area: pressure
+			dCoef_custom[1] = 1E4 / (double)shGHit->globalHits.hit.nbDesorbed;
+			dCoef_custom[2] = 1E4 / (double)shGHit->globalHits.hit.nbDesorbed;
+			timeCorrection = (mApp->worker.displayedMoment == 0) ? mApp->worker.wp.finalOutgassingRate : mApp->worker.wp.totalDesorbedMolecules / mApp->worker.wp.timeWindowSize;
 
 			for (int i = 0; i < 3; i++) {
 				//texture limits already corrected by timeFactor in UpdateMCHits()
@@ -143,8 +144,8 @@ void MolflowGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, 
 			size_t dSize = nbElem * sizeof(DirectionCell);
 
 			double iDesorbed = 0.0;
-			if (shGHit->total.hit.nbDesorbed)
-			iDesorbed = 1.0 / (double)shGHit->total.hit.nbDesorbed;
+			if (shGHit->globalHits.hit.nbDesorbed)
+			iDesorbed = 1.0 / (double)shGHit->globalHits.hit.nbDesorbed;
 			
 			DirectionCell *dirs = (DirectionCell *)((BYTE *)shGHit + (f->sh.hitOffset + facetHitsSize + profSize*(1 + nbMoments) + tSize*(1 + nbMoments) + dSize*mApp->worker.displayedMoment));
 			for (size_t j = 0; j < nbElem; j++) {

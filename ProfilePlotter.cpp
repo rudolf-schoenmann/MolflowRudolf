@@ -1,9 +1,9 @@
 /*
-File:        ProfilePlotter.cpp
-Description: Profile plotter window
-Program:     MolFlow
-Author:      R. KERSEVAN / J-L PONS / M ADY
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
 Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,8 +14,9 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-*/
 
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #include "ProfilePlotter.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
@@ -71,14 +72,14 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 	lastUpdate = 0.0f;
 
 	nbColors = 8;
-	colors[0] = new GLCColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
-	colors[1] = new GLCColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
-	colors[2] = new GLCColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
-	colors[3] = new GLCColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
-	colors[4] = new GLCColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
-	colors[5] = new GLCColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
-	colors[6] = new GLCColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
-	colors[7] = new GLCColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
+	colors[0] = new GLColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
+	colors[1] = new GLColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
+	colors[2] = new GLColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
+	colors[3] = new GLColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
+	colors[4] = new GLColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
+	colors[5] = new GLColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
+	colors[6] = new GLColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
+	colors[7] = new GLColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
@@ -102,8 +103,8 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 	removeButton = new GLButton(0, "Remove curve");
 	Add(removeButton);
 
-	resetButton = new GLButton(0, "Remove all");
-	Add(resetButton);
+	removeAllButton = new GLButton(0, "Remove all");
+	Add(removeAllButton);
 
 	profCombo = new GLCombo(0);
 	profCombo->SetEditable(true);
@@ -159,7 +160,7 @@ void ProfilePlotter::SetBounds(int x, int y, int w, int h) {
 	selButton->SetBounds(190, h - 95, 80, 19);
 	addButton->SetBounds(275, h - 95, 80, 19);
 	removeButton->SetBounds(360, h - 95, 80, 19);
-	resetButton->SetBounds(445, h - 95, 80, 19);
+	removeAllButton->SetBounds(445, h - 95, 80, 19);
 	logYToggle->SetBounds(190, h - 70, 40, 19);
 	correctForGas->SetBounds(240, h - 70, 80, 19);
 	normLabel->SetBounds(7, h - 68, 50, 19);
@@ -238,7 +239,7 @@ void ProfilePlotter::Update(float appTime, bool force) {
 void ProfilePlotter::plot() {
 
 	GLParser *parser = new GLParser();
-	parser->SetExpression(formulaText->GetText());
+	parser->SetExpression(formulaText->GetText().c_str());
 	if (!parser->Parse()) {
 		GLMessageBox::Display(parser->GetErrorMsg(), "Error", GLDLG_OK, GLDLG_ICONERROR);
 		SAFE_DELETE(parser);
@@ -276,14 +277,14 @@ void ProfilePlotter::plot() {
 
 	if (found) {
 		v = views[i];
-		v->SetName(formulaText->GetText());
+		v->SetName(formulaText->GetText().c_str());
 		v->Reset();
 	}
 	else {
 
 		if (nbView < 50) {
 			v = new GLDataView();
-			v->SetName(formulaText->GetText());
+			v->SetName(formulaText->GetText().c_str());
 			v->userData1 = -1;
 			chart->GetY1Axis()->AddDataView(v);
 			views[nbView] = v;
@@ -328,10 +329,10 @@ void ProfilePlotter::refreshViews() {
 			v->Reset();
 			ProfileSlice *profilePtr = (ProfileSlice *)(buffer + f->sh.hitOffset + facetHitsSize + worker->displayedMoment*sizeof(ProfileSlice)*PROFILE_SIZE);
 
-			//FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset+ worker->displayedMoment*sizeof(FacetHitBuffer));
+			//FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->wp.hitOffset+ worker->displayedMoment*sizeof(FacetHitBuffer));
 			//double fnbHit = (double)fCount->hit.nbMCHit;
 			//if (fnbHit == 0.0) fnbHit = 1.0;
-			if (worker->nbDesorption > 0){
+			if (worker->globalHitCache.globalHits.hit.nbDesorbed > 0){
 
 				switch (displayMode) {
 				case 0: //Raw data
@@ -341,7 +342,7 @@ void ProfilePlotter::refreshViews() {
 					break;
 
 				case 1: //Pressure
-					scaleY = 1.0 / (f->GetArea() / (double)PROFILE_SIZE*1E-4)* worker->gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
+					scaleY = 1.0 / (f->GetArea() / (double)PROFILE_SIZE*1E-4)* worker->wp.gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
 					scaleY *= worker->GetMoleculesPerTP(worker->displayedMoment);
 
 					for (int j = 0; j < PROFILE_SIZE; j++)
@@ -409,7 +410,7 @@ void ProfilePlotter::refreshViews() {
 		}
 		else {
 
-			if (v->userData1 == -2 && worker->nbDesorption != 0.0) {
+			if (v->userData1 == -2 && worker->globalHitCache.globalHits.hit.nbDesorbed != 0.0) {
 
 				// Volatile profile
 				v->Reset();
@@ -419,14 +420,14 @@ void ProfilePlotter::refreshViews() {
 					if (f->sh.isVolatile) {
 						FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset+worker->displayedMoment*sizeof(FacetHitBuffer));
 						double z = geom->GetVertex(f->indices[0])->z;
-						v->Add(z,fCount->hit.nbAbsEquiv / worker->nbDesorption, false);
+						v->Add(z,fCount->hit.nbAbsEquiv / worker->globalHitCache.globalHits.hit.nbDesorbed, false);
 					}
 				}
 				// Last
 				Facet *f = geom->GetFacet(28);
 				FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset+worker->displayedMoment*sizeof(FacetHitBuffer));
 				double fnbAbs = fCount->hit.nbAbsEquiv;
-				v->Add(1000.0, fnbAbs / worker->nbDesorption, false);
+				v->Add(1000.0, fnbAbs / worker->globalHitCache.globalHits.hit.nbDesorbed, false);
 				v->CommitChange();
 
 				//v->Reset();
@@ -461,7 +462,7 @@ void ProfilePlotter::addView(int facet) {
 	if (nbView < MAX_VIEWS) {
 		Facet *f = geom->GetFacet(facet);
 		GLDataView *v = new GLDataView();
-		//sprintf(tmp, "F#%d %s", facet + 1, profType[f->sh.profileType]);
+		//sprintf(tmp, "F#%d %s", facet + 1, profType[f->wp.profileType]);
 		sprintf(tmp, "F#%d", facet + 1);
 		v->SetName(tmp);
 		v->SetColor(*colors[nbView%nbColors]);
@@ -543,7 +544,7 @@ void ProfilePlotter::ProcessMessage(GLComponent *src, int message) {
 			if (idx >= 0) remView(profCombo->GetUserValueAt(idx));
 			refreshViews();
 		}
-		else if (src == resetButton) {
+		else if (src == removeAllButton) {
 
 			Reset();
 		}

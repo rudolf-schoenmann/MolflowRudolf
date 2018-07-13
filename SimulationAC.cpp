@@ -1,21 +1,22 @@
 /*
-  File:        SimulationAC.c
-  Description: Angular Coefficient Simulation for UHV (Physics related routines)
-  Program:     MolFlow
-  Author:      R. KERSEVAN / J-L PONS / M ADY
-  Copyright:   E.S.R.F / CERN
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
-
 #ifdef WIN
 #define NOMINMAX
 //#include <windows.h> // For GetTickCount()
@@ -40,12 +41,12 @@ extern void GetState();
 
 // Global handles
 
-extern SIMULATION *sHandle;
+extern Simulation *sHandle;
 
 // Loop over all opaque element
 #define LOOP(_k,_f,_i,_j,_idx)                                      \
-for(_k=0;_k<sHandle->str[0].nbFacet;_k++) {                         \
-  (_f) = sHandle->str[0].facets[_k];                                \
+for(_k=0;_k<sHandle->structures[0].facets.size();_k++) {                         \
+  (_f) = &sHandle->structures[0].facets[_k];                                \
   for(_j=0;_j<(_f)->sh.texHeight && (_f)->sh.opacity==1.0;_j++) {   \
     for(_i=0;_i<(_f)->sh.texWidth;_i++) {
 
@@ -104,12 +105,11 @@ bool ComputeACMatrix(SHELEM_OLD *mesh) {
 
   // Count number of elements
   sHandle->nbAC = 0;
-  for(k1=0;k1<sHandle->str[0].nbFacet;k1++) {
-    f1 = sHandle->str[0].facets[k1];
-    if(f1->sh.opacity==1.0f) {
-      sHandle->nbAC += f1->sh.texHeight * f1->sh.texWidth;
-    } else if(f1->sh.opacity==0.0f) {
-      sHandle->nbACT += f1->sh.texHeight * f1->sh.texWidth;
+  for(auto& f1 : sHandle->structures[0].facets) {
+    if(f1.sh.opacity==1.0f) {
+      sHandle->nbAC += f1.sh.texHeight * f1.sh.texWidth;
+    } else if(f1.sh.opacity==0.0f) {
+      sHandle->nbACT += f1.sh.texHeight * f1.sh.texWidth;
     } else {
       // partial transparent facet not supported with AC
       SetErrorSub("AC does not handle partial opacity");
@@ -187,7 +187,7 @@ bool ComputeACMatrix(SHELEM_OLD *mesh) {
     sHandle->acArea[idx] = mesh[idx1].area;
     // Normalize density for Q=1,M=28,T=20degC
     // TODO: Update for random gas mass/temperature
-    if(f1->sh.desorbType) sHandle->acDesorb[idx] = (ACFLOAT)(1.0/(11.7*sHandle->finalOutgassingRate));
+    if(f1->sh.desorbType) sHandle->acDesorb[idx] = (ACFLOAT)(1.0/(11.7*sHandle->wp.finalOutgassingRate));
     sHandle->acRho[idx] = (ACFLOAT)(1.0 - f1->sh.sticking);
     idx++;
   END_LOOP(f1,idx1)
@@ -229,7 +229,7 @@ bool ComputeACMatrix(SHELEM_OLD *mesh) {
           cos2 = Dot(f2->sh.N,c1 - c2);
 
           if(cos1>0.0 && cos2>0.0 && r2>0.0) {
-            if( Visible(&c1,&c2,f1,f2,THitCache) ) {
+            if( Visible(sHandle, &c1,&c2,f1,f2) ) {
               vf = (cos1 * cos2) / (PI * r2 * r2);
               sHandle->acMatrix[idx] = (ACFLOAT)vf;
             } else {
@@ -361,10 +361,9 @@ bool SimulationACStep(int nbStep) {
 void UpdateACHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 
   GlobalHitBuffer *gHits;
-  SubprocessFacet   *f;
   TextureCell    *shTexture;
   FacetHitBuffer  *fHits;
-  int      i,j,k,idx,nbE;
+  int      i,j,idx,nbE;
   double  sumVal=0.0;
   double  sumAbs=0.0;
   double  sumDes=0.0;
@@ -374,33 +373,31 @@ void UpdateACHits(Dataport *dpHit,int prIdx,DWORD timeout) {
   gHits = (GlobalHitBuffer *)dpHit->buff;
   gHits->texture_limits[0].max.all = 0.0;
   gHits->texture_limits[0].min.all = 0.0;
-  gHits->sMode = AC_MODE;
-  gHits->total.hit.nbDesorbed = sHandle->totalDesorbed;
+  //sHandle->wp.sMode = AC_MODE;
+  gHits->globalHits.hit.nbDesorbed = sHandle->totalDesorbed;
 
   // Update texture
   idx = 0;
   size_t facetHitsSize = (1 + sHandle->moments.size()) * sizeof(FacetHitBuffer);
-  for(k=0;k<sHandle->str[0].nbFacet;k++) {
-
-    f = sHandle->str[0].facets[k];
+  for(auto& f : sHandle->structures[0].facets) {
     sumDes = 0.0;
     sumAbs = 0.0;
     sumVal = 0.0;
     nbE = 0;
-    shTexture = (TextureCell *)((char *)dpHit->buff + (f->sh.hitOffset + facetHitsSize + f->profileSize));
-    for(j=0;j<f->sh.texHeight && f->sh.opacity==1.0f;j++) {
-      for(i=0;i<f->sh.texWidth;i++) {
+    shTexture = (TextureCell *)((char *)dpHit->buff + (f.sh.hitOffset + facetHitsSize + f.profileSize));
+    for(j=0;j<f.sh.texHeight && f.sh.opacity==1.0f;j++) {
+      for(i=0;i<f.sh.texWidth;i++) {
         ACFLOAT val = (ACFLOAT)(sHandle->acDensity[idx]);
-        shTexture[i + j*f->sh.texWidth].sum_v_ort_per_area = val; //was .count
+        shTexture[i + j*f.sh.texWidth].sum_v_ort_per_area = val; //was .count
         if( val > gHits->texture_limits[0].max.all ) gHits->texture_limits[0].max.all = val;
         // Normalize over facet area
-        sumVal += (double)(sHandle->acDensity[idx]*sHandle->acArea[idx]/f->sh.area);
-        sumAbs += (double)(sHandle->acAbsorb[idx]*sHandle->acArea[idx]/f->sh.area);
-        sumDes += (double)(sHandle->acDesorb[idx]*sHandle->acArea[idx]/f->sh.area);
+        sumVal += (double)(sHandle->acDensity[idx]*sHandle->acArea[idx]/f.sh.area);
+        sumAbs += (double)(sHandle->acAbsorb[idx]*sHandle->acArea[idx]/f.sh.area);
+        sumDes += (double)(sHandle->acDesorb[idx]*sHandle->acArea[idx]/f.sh.area);
         idx++;
       }
     }
-    fHits = (FacetHitBuffer  *)((char *)dpHit->buff + f->sh.hitOffset);
+    fHits = (FacetHitBuffer  *)((char *)dpHit->buff + f.sh.hitOffset);
     fHits->density.value    = sumVal;
     fHits->density.desorbed = sumDes;
     fHits->density.absorbed = sumAbs;

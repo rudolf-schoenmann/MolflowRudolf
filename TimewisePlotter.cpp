@@ -1,9 +1,9 @@
 /*
-File:        TimewisePlotter.cpp
-Description: Timewise Profile plotter window
-Program:     MolFlow
-Author:      R. KERSEVAN / J-L PONS / M ADY
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
 Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,8 +14,9 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-*/
 
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #include "TimewisePlotter.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
@@ -189,7 +190,7 @@ void TimewisePlotter::Display(Worker *w) {
 	GLDataView *v = new GLDataView();
 	v->SetName("Transmission Prob.");
 	v->userData1 = -2;
-	GLCColor c;
+	GLColor c;
 	c.r=0;c.g=255;c.b=0;
 	v->SetColor(c);
 	chart->GetY1Axis()->AddDataView(v);
@@ -243,13 +244,13 @@ void TimewisePlotter::refreshViews() {
 		if (idx < 0) return;
 		Facet *f = geom->GetFacet(profCombo->GetUserValueAt(idx));
 		v->Reset();
-		//FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
+		//FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->wp.hitOffset);
 		//double fnbHit = (double)fCount->hit.nbMCHit;
 		/*int momentIndex;
 		if (m==(nbView-1) && constantFlowToggle->GetState()) momentIndex=0; //Constant flow
 		else momentIndex=m+1; //any other 'normal' moment*/
 		ProfileSlice *profilePtr = (ProfileSlice *)(buffer + f->sh.hitOffset + facetHitsSize + v->userData1*sizeof(ProfileSlice)*PROFILE_SIZE);
-		if (worker->nbDesorption > 0) {
+		if (worker->globalHitCache.globalHits.hit.nbDesorbed > 0) {
 			switch (displayMode) {
 			case 0: //Raw data
 				for (int j = 0; j < PROFILE_SIZE; j++)
@@ -257,11 +258,11 @@ void TimewisePlotter::refreshViews() {
 				break;
 
 			case 1: //Pressure
-				scaleY = 1.0 / (f->GetArea() *1E-4 / (double)PROFILE_SIZE) * worker->gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
+				scaleY = 1.0 / (f->GetArea() *1E-4 / (double)PROFILE_SIZE) * worker->wp.gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
 
 				scaleY *= worker->GetMoleculesPerTP(v->userData1);
-				//if(f->sh.opacity>0.0) scaleY *= f->sh.opacity;
-				//if(IsZero(f->sh.opacity)) scaleY*=2; //transparent profiles are profiled only once...
+				//if(f->wp.opacity>0.0) scaleY *= f->wp.opacity;
+				//if(IsZero(f->wp.opacity)) scaleY*=2; //transparent profiles are profiled only once...
 
 				for (int j = 0; j < PROFILE_SIZE; j++)
 					v->Add((double)j, profilePtr[j].sum_v_ort*scaleY, false);
@@ -337,7 +338,7 @@ void TimewisePlotter::addView(int facet) {
 
 	if (constantFlowToggle->GetState()) { //add constant flow
 		GLDataView *v = new GLDataView();
-		sprintf(tmp, "Moment0 (Constant Flow)"/*, facet + 1, profType[f->sh.profileType]*/);
+		sprintf(tmp, "Moment0 (Constant Flow)"/*, facet + 1, profType[f->wp.profileType]*/);
 		v->SetName(tmp);
 		v->userData1 = 0;
 		v->SetStyle(STYLE_DOT);
@@ -418,7 +419,7 @@ void TimewisePlotter::ProcessMessage(GLComponent *src, int message) {
 			int idx = profCombo->GetSelectedIndex();
 			if(idx>=0) remView(profCombo->GetUserValueAt(idx));
 			refreshViews();
-			} else if(src==resetButton) {
+			} else if(src==removeAllButton) {
 			Reset();
 			}*/
 	case MSG_COMBO:
@@ -495,18 +496,11 @@ void TimewisePlotter::UpdateMoment() {
 bool TimewisePlotter::ParseMoments(){
 	//Quick string parsing from http://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
 	std::string s = momentsText->GetText();
-	std::string delimiter = ";";
-	size_t pos = 0;
-	std::string token;
-	displayedMoments = std::vector<size_t>();
-	while ((pos = s.find(delimiter)) != std::string::npos) {
-		token = s.substr(0, pos);
-		//process tokens
+	std::vector<std::string> tokens = SplitString(s,';');
+	displayedMoments.clear();
+	for (const auto& token : tokens) {
 		ParseToken(token);
-		s.erase(0, pos + delimiter.length());
 	}
-	//last token
-	ParseToken(s);
 	return true;
 }
 

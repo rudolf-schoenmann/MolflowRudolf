@@ -1,9 +1,9 @@
 /*
-File:        FacetAdvParams.cpp
-Description: Advanced facet settings window (used to be fact mesh settings)
-Program:     MolFlow
-Author:      R. KERSEVAN / J-L PONS / M ADY
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
 Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,8 +14,9 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-*/
 
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #include <math.h>
 
 #include "FacetAdvParams.h"
@@ -445,7 +446,7 @@ void FacetAdvParams::UpdateSizeForRatio() {
 		return;
 	}
 
-	if (sscanf(resolutionText->GetText(), "%lf", &ratio) == 0) {
+	if (!resolutionText->GetNumber(&ratio)) {
 		ramText->SetText("");
 		cellText->SetText("");
 		return;
@@ -458,7 +459,7 @@ void FacetAdvParams::UpdateSizeForRatio() {
 
 		for (size_t i = 0; i < nbFacet; i++) {
 			Facet *f = geom->GetFacet(i);
-			//if(f->sh.opacity==1.0) {
+			//if(f->wp.opacity==1.0) {
 			if (f->selected) {
 				cell += (llong)f->GetNbCellForRatio(ratio);
 				ram += (llong)f->GetTexRamSizeForRatio(ratio, boundMap, false, 1 + worker->moments.size());
@@ -611,14 +612,14 @@ void FacetAdvParams::Refresh(std::vector<size_t> selection) {
 	double f0Area = f0->GetArea();
 	sumArea = f0Area;
 	sumOutgassing = f0->sh.totalOutgassing;
-	sumAngleMapSize = f0->sh.anglemapParams.hasRecorded ? (f0->sh.anglemapParams.thetaLowerRes + f0->sh.anglemapParams.thetaHigherRes) * f0->sh.anglemapParams.phiWidth : 0;
+	sumAngleMapSize = f0->sh.anglemapParams.GetRecordedMapSize();
 	
 	for (size_t i = 1; i < selection.size(); i++) {
 		Facet *f = geom->GetFacet(selection[i]);
 		double fArea = f->GetArea();
 		sumArea += fArea;
 		sumOutgassing += f->sh.totalOutgassing;
-		sumAngleMapSize += f->sh.anglemapParams.hasRecorded ? (f->sh.anglemapParams.thetaLowerRes + f->sh.anglemapParams.thetaHigherRes) * f->sh.anglemapParams.phiWidth : 0;
+		sumAngleMapSize += f->sh.anglemapParams.GetRecordedMapSize();
 		isEnabledE = isEnabledE && (f0->sh.isTextured == f->sh.isTextured);
 		isBoundE = isBoundE && (f0->hasMesh == f->hasMesh);
 		CountDesE = CountDesE && f0->sh.countDes == f->sh.countDes;
@@ -788,7 +789,12 @@ void FacetAdvParams::Refresh(std::vector<size_t> selection) {
 		facetSuperDest->SetText("...");
 	}
 	if (superIdxE) {
-		facetStructure->SetText(f0->sh.superIdx + 1);
+		if (f0->sh.superIdx >= 0) {
+			facetStructure->SetText(f0->sh.superIdx + 1);
+		}
+		else {
+			facetStructure->SetText("All");
+		}
 	}
 	else {
 		facetStructure->SetText("...");
@@ -905,7 +911,7 @@ bool FacetAdvParams::ApplyTexture(bool force) {
 			//Got a valid number
 			doRatio = true;
 		}
-		else if (strcmp(resolutionText->GetText(), "...") != 0) { //Not in mixed "..." state
+		else if (resolutionText->GetText()!="...") { //Not in mixed "..." state
 			GLMessageBox::Display("Invalid texture resolution\nMust be a non-negative number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
 		}
@@ -919,7 +925,7 @@ bool FacetAdvParams::ApplyTexture(bool force) {
 	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 	int count = 0;
-	for (auto sel : selectedFacets) {
+	for (auto& sel : selectedFacets) {
 		Facet *f = geom->GetFacet(sel);
 		bool hadAnyTexture = f->sh.countDes || f->sh.countAbs || f->sh.countRefl || f->sh.countTrans || f->sh.countACD || f->sh.countDirection;
 		bool hadDirCount = f->sh.countDirection;
@@ -1004,10 +1010,24 @@ bool FacetAdvParams::Apply() {
 
 	int superStruct;
 	bool doSuperStruct = false;
-	if (sscanf(facetStructure->GetText(), "%d", &superStruct) > 0 && superStruct > 0 && superStruct <= geom->GetNbStructure()) doSuperStruct = true;
+	auto ssText = facetStructure->GetText();
+	if (Contains({ "All","all" }, ssText)) {
+		doSuperStruct = true;
+		superStruct = -1;
+	}
+	else if (ssText == "...") {
+		//Nothing to do, doSuperStruct is already false
+	} 
 	else {
-		if (strcmp(facetStructure->GetText(), "...") == 0) doSuperStruct = false;
-		else{
+		try {
+			superStruct = std::stoi(ssText);
+			superStruct--; //Internally numbered from 0
+			if (superStruct < 0 || superStruct >= geom->GetNbStructure()) {
+				throw std::invalid_argument("Invalid superstructure number");
+			}
+			doSuperStruct = true;
+		}
+		catch (std::invalid_argument err) {
 			GLMessageBox::Display("Invalid superstructre number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
 		}
@@ -1016,12 +1036,12 @@ bool FacetAdvParams::Apply() {
 	// Super structure destination (link)
 	int superDest;
 	bool doLink = false;
-	if (strcmp(facetSuperDest->GetText(), "none") == 0 || strcmp(facetSuperDest->GetText(), "no") == 0 || strcmp(facetSuperDest->GetText(), "0") == 0) {
+	if (Contains({ "none","no","0" },facetSuperDest->GetText())) {
 		doLink = true;
 		superDest = 0;
 	}
-	else if (sscanf(facetSuperDest->GetText(), "%d", &superDest) > 0) {
-		if (superDest == superStruct) {
+	else if (facetSuperDest->GetNumberInt(&superDest)) {
+		if (superDest == (superStruct+1)) {
 			GLMessageBox::Display("Link and superstructure can't be the same", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
 		}
@@ -1032,7 +1052,7 @@ bool FacetAdvParams::Apply() {
 		else
 			doLink = true;
 	}
-	else if (strcmp(facetSuperDest->GetText(), "...") == 0) doLink = false;
+	else if (facetSuperDest->GetText() == "...") doLink = false;
 	else {
 		GLMessageBox::Display("Invalid superstructure destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return false;
@@ -1056,7 +1076,7 @@ bool FacetAdvParams::Apply() {
 		doTeleport = true;
 	}
 	else {
-		if (strcmp(facetTeleport->GetText(), "...") == 0) doTeleport = false;
+		if (facetTeleport->GetText() == "...") doTeleport = false;
 		else {
 			GLMessageBox::Display("Invalid teleport destination\n(If no teleport: set number to 0)", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
@@ -1074,7 +1094,7 @@ bool FacetAdvParams::Apply() {
 		doAccfactor = true;
 	}
 	else {
-		if (strcmp(facetAccFactor->GetText(), "...") == 0) doAccfactor = false;
+		if (facetAccFactor->GetText() == "...") doAccfactor = false;
 		else {
 			GLMessageBox::Display("Invalid accomodation factor number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
@@ -1084,7 +1104,7 @@ bool FacetAdvParams::Apply() {
 	// Use desorption map
 	int useMapA = 0;
 	bool doUseMapA = false;
-	if (strcmp(facetUseDesFile->GetSelectedValue(), "...") == 0) doUseMapA = false;
+	if (facetUseDesFile->GetSelectedValue()=="...") doUseMapA = false;
 	else {
 		useMapA = (facetUseDesFile->GetSelectedIndex() == 1);
 		bool missingMap = false;
@@ -1118,7 +1138,7 @@ bool FacetAdvParams::Apply() {
 		doSojF = true;
 	}
 	else {
-		if (enableSojournTime->GetState() == 0 || strcmp(sojournFreq->GetText(), "...") == 0) doSojF = false;
+		if (enableSojournTime->GetState() == 0 || sojournFreq->GetText() == "...") doSojF = false;
 		else {
 			GLMessageBox::Display("Invalid wall sojourn time frequency", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
@@ -1137,7 +1157,7 @@ bool FacetAdvParams::Apply() {
 		doSojE = true;
 	}
 	else {
-		if (enableSojournTime->GetState() == 0 || strcmp(sojournE->GetText(), "...") == 0) doSojE = false;
+		if (enableSojournTime->GetState() == 0 || sojournE->GetText()=="...") doSojE = false;
 		else {
 			GLMessageBox::Display("Invalid wall sojourn time second coefficient (Energy)", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return false;
@@ -1148,7 +1168,7 @@ bool FacetAdvParams::Apply() {
 	int angleMapWidth;
 	bool doAngleMapWidth = false;
 
-	if (angleMapRecordCheckbox->GetState() == 0 || strcmp(angleMapPhiResText->GetText(), "...") == 0) doAngleMapWidth = false;
+	if (angleMapRecordCheckbox->GetState() == 0 || angleMapPhiResText->GetText()== "...") doAngleMapWidth = false;
 	else if (angleMapPhiResText->GetNumberInt(&angleMapWidth)) {
 		if (angleMapWidth <= 0) {
 			GLMessageBox::Display("Angle map width has to be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -1165,7 +1185,7 @@ bool FacetAdvParams::Apply() {
 	int angleMapLowRes;
 	bool doAngleMapLowRes = false;
 
-	if (angleMapRecordCheckbox->GetState() == 0 || strcmp(angleMapThetaLowresText->GetText(), "...") == 0) doAngleMapLowRes = false;
+	if (angleMapRecordCheckbox->GetState() == 0 || angleMapThetaLowresText->GetText()== "...") doAngleMapLowRes = false;
 	else if (angleMapThetaLowresText->GetNumberInt(&angleMapLowRes)) {
 		if (angleMapLowRes < 0) {
 			GLMessageBox::Display("Angle map resolution (below theta limit) has to be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -1182,7 +1202,7 @@ bool FacetAdvParams::Apply() {
 	int angleMapHiRes;
 	bool doAngleMapHiRes = false;
 
-	if (angleMapRecordCheckbox->GetState() == 0 || strcmp(angleMapThetaHighresText->GetText(), "...") == 0) doAngleMapHiRes = false;
+	if (angleMapRecordCheckbox->GetState() == 0 || angleMapThetaHighresText->GetText()== "...") doAngleMapHiRes = false;
 	else if (angleMapThetaHighresText->GetNumberInt(&angleMapHiRes)) {
 		if (angleMapHiRes < 0) {
 			GLMessageBox::Display("Angle map resolution (above theta limit) has to be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -1204,7 +1224,7 @@ bool FacetAdvParams::Apply() {
 	double angleMapThetaLimit;
 	bool doAngleMapThetaLimit = false;
 
-	if (angleMapRecordCheckbox->GetState() == 0 || strcmp(angleMapThetaLimitText->GetText(), "...") == 0) doAngleMapThetaLimit = false;
+	if (angleMapRecordCheckbox->GetState() == 0 || angleMapThetaLimitText->GetText() == "...") doAngleMapThetaLimit = false;
 	else if (angleMapThetaLimitText->GetNumber(&angleMapThetaLimit)) {
 		if (!(angleMapThetaLimit >= 0 && angleMapThetaLimit<=PI/2.0)) {
 			GLMessageBox::Display("Angle map theta limit must be between 0 and PI/2", "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -1230,7 +1250,7 @@ bool FacetAdvParams::Apply() {
 		}
 		doDiffuseRefl = true;
 	}
-	else if (strcmp(diffuseReflBox->GetText(), "...") != 0) {
+	else if (diffuseReflBox->GetText()!= "...") {
 		GLMessageBox::Display("Invalid diffuse reflection ratio", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return false;
 	}
@@ -1242,7 +1262,7 @@ bool FacetAdvParams::Apply() {
 		}
 		doSpecularRefl = true;
 	}
-	else if (strcmp(specularReflBox->GetText(), "...") != 0) {
+	else if (specularReflBox->GetText()!= "...") {
 		GLMessageBox::Display("Invalid specular reflection ratio", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return false;
 	}
@@ -1259,7 +1279,7 @@ bool FacetAdvParams::Apply() {
 		}
 		doReflExponent = true;
 	}
-	else if (strcmp(reflectionExponentBox->GetText(), "...") != 0) {
+	else if (reflectionExponentBox->GetText()!= "...") {
 		GLMessageBox::Display("Invalid cosine^N reflection exponent", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return false;
 	}
@@ -1269,7 +1289,7 @@ bool FacetAdvParams::Apply() {
 	//First applying angle map recording before a reset is done
 	int angleMapState = angleMapRecordCheckbox->GetState();
 	if (angleMapState < 2) {
-		for (auto sel:selectedFacets) {
+		for (auto& sel:selectedFacets) {
 			geom->GetFacet(sel)->sh.anglemapParams.record=angleMapState;
 		}
 	}
@@ -1279,26 +1299,26 @@ bool FacetAdvParams::Apply() {
 	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 	int count = 0;
-	for (auto sel:selectedFacets) {
+	for (auto& sel:selectedFacets) {
 		Facet *f = geom->GetFacet(sel);
 		/*
-		bool hadAnyTexture = f->sh.countDes || f->sh.countAbs || f->sh.countRefl || f->sh.countTrans || f->sh.countACD || f->sh.countDirection;
-		bool hadDirCount = f->sh.countDirection;
+		bool hadAnyTexture = f->wp.countDes || f->wp.countAbs || f->wp.countRefl || f->wp.countTrans || f->wp.countACD || f->wp.countDirection;
+		bool hadDirCount = f->wp.countDirection;
 		
 		if (enableBtn->GetState() == 0 || ratio == 0.0) {
 			//Let the user disable textures with the main switch or by typing 0 as resolution
-			f->sh.countDes = f->sh.countAbs = f->sh.countRefl = f->sh.countTrans = f->sh.countACD = f->sh.countDirection = false;
+			f->wp.countDes = f->wp.countAbs = f->wp.countRefl = f->wp.countTrans = f->wp.countACD = f->wp.countDirection = false;
 		}
 		else {
-			if (recordDesBtn->GetState() < 2) f->sh.countDes = recordDesBtn->GetState();
-			if (recordAbsBtn->GetState() < 2) f->sh.countAbs = recordAbsBtn->GetState();
-			if (recordReflBtn->GetState() < 2) f->sh.countRefl = recordReflBtn->GetState();
-			if (recordTransBtn->GetState() < 2) f->sh.countTrans = recordTransBtn->GetState();
-			if (recordACBtn->GetState() < 2) f->sh.countACD = recordACBtn->GetState();
-			if (recordDirBtn->GetState() < 2) f->sh.countDirection = recordDirBtn->GetState();
+			if (recordDesBtn->GetState() < 2) f->wp.countDes = recordDesBtn->GetState();
+			if (recordAbsBtn->GetState() < 2) f->wp.countAbs = recordAbsBtn->GetState();
+			if (recordReflBtn->GetState() < 2) f->wp.countRefl = recordReflBtn->GetState();
+			if (recordTransBtn->GetState() < 2) f->wp.countTrans = recordTransBtn->GetState();
+			if (recordACBtn->GetState() < 2) f->wp.countACD = recordACBtn->GetState();
+			if (recordDirBtn->GetState() < 2) f->wp.countDirection = recordDirBtn->GetState();
 		}
 		
-		bool hasAnyTexture = f->sh.countDes || f->sh.countAbs || f->sh.countRefl || f->sh.countTrans || f->sh.countACD || f->sh.countDirection;
+		bool hasAnyTexture = f->wp.countDes || f->wp.countAbs || f->wp.countRefl || f->wp.countTrans || f->wp.countACD || f->wp.countDirection;
 		*/
 
 		if (doTeleport) f->sh.teleportDest = teleport;
@@ -1307,8 +1327,8 @@ bool FacetAdvParams::Apply() {
 		if (doSpecularRefl) f->sh.reflection.specularPart = specularRefl;
 		if (doReflExponent) f->sh.reflection.cosineExponent = reflectionExponent;
 		if (doSuperStruct) {
-			if (f->sh.superIdx != (superStruct - 1)) {
-				f->sh.superIdx = superStruct - 1;
+			if (f->sh.superIdx != superStruct) {
+				f->sh.superIdx = superStruct;
 				structChanged = true;
 			}
 		}
@@ -1362,7 +1382,7 @@ bool FacetAdvParams::Apply() {
 		/*
 		//set textures
 		try {
-			bool needsRemeshing = (hadAnyTexture != hasAnyTexture) || (hadDirCount != f->sh.countDirection) || (doRatio && (!IsEqual(geom->GetFacet(sel)->tRatio , ratio)));
+			bool needsRemeshing = (hadAnyTexture != hasAnyTexture) || (hadDirCount != f->wp.countDirection) || (doRatio && (!IsEqual(geom->GetFacet(sel)->tRatio , ratio)));
 			if (needsRemeshing) geom->SetFacetTexture(sel, hasAnyTexture ? ratio : 0.0, hasAnyTexture ? boundMap : false);
 		}
 		catch (Error &e) {
@@ -1378,7 +1398,7 @@ bool FacetAdvParams::Apply() {
 			return false;
 		}
 		*/
-		//if (angleMapRecordCheckbox->GetState() < 2) f->sh.anglemapParams.record = angleMapRecordCheckbox->GetState();
+		//if (angleMapRecordCheckbox->GetState() < 2) f->wp.anglemapParams.record = angleMapRecordCheckbox->GetState();
 		if (showTexture->GetState() < 2) f->textureVisible = showTexture->GetState();
 		if (showVolume->GetState() < 2) f->volumeVisible = showVolume->GetState();
 		nbPerformed++;

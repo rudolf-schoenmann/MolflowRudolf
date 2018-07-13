@@ -1,4 +1,22 @@
+/*
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #include "Facet_shared.h"
 #include "File.h"
 #include "PugiXML\pugixml.hpp"
@@ -9,6 +27,8 @@ using namespace pugi;
 #include "GLApp/GLToolkit.h"
 #include "GlApp/MathTools.h" //IS_ZERO
 #include "GLApp/GLMessageBox.h"
+
+#include <cereal/types/vector.hpp>
 
 // Colormap stuff, defined in GLGradient.cpp
 extern std::vector<int> colorMap;
@@ -92,15 +112,15 @@ void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 	file->ReadKeyword("acMode"); file->ReadKeyword(":");
 	sh.countACD = file->ReadInt();
 	file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-	counterCache.hit.nbAbsEquiv = file->ReadDouble();
+	facetHitCache.hit.nbAbsEquiv = file->ReadDouble();
 
 	file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-	counterCache.hit.nbDesorbed = file->ReadLLong();
+	facetHitCache.hit.nbDesorbed = file->ReadLLong();
 
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
 
-	counterCache.hit.nbMCHit = file->ReadLLong();
-	counterCache.hit.nbHitEquiv = static_cast<double>(counterCache.hit.nbMCHit);
+	facetHitCache.hit.nbMCHit = file->ReadLLong();
+	facetHitCache.hit.nbHitEquiv = static_cast<double>(facetHitCache.hit.nbMCHit);
 	if (version >= 2) {
 		// Added in GEO version 2
 		file->ReadKeyword("temperature"); file->ReadKeyword(":");
@@ -269,7 +289,7 @@ void Facet::LoadXML(xml_node f, size_t nbVertex, bool isMolflowFile, bool& ignor
 
 			std::stringstream angleText;
 			angleText << angleMapNode.child_value("map");
-			angleMapCache = (size_t*)malloc(sh.anglemapParams.phiWidth * (sh.anglemapParams.thetaLowerRes + sh.anglemapParams.thetaHigherRes) * sizeof(size_t));
+			angleMapCache = (size_t*)malloc(sh.anglemapParams.GetDataSize());
 
 			for (int iy = 0; iy < (sh.anglemapParams.thetaLowerRes + sh.anglemapParams.thetaHigherRes); iy++) {
 				for (int ix = 0; ix < sh.anglemapParams.phiWidth; ix++) {
@@ -362,10 +382,10 @@ void Facet::LoadSYN(FileReader *file, int version, size_t nbVertex) {
 	sh.countTrans = false; file->ReadInt();
 	if (version >= 10) file->ReadKeyword("nbAbsEquiv");
 	else file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-	counterCache.hit.nbAbsEquiv = 0; file->ReadLLong();
+	facetHitCache.hit.nbAbsEquiv = 0; file->ReadLLong();
 	if (version < 3) {
 		file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-		counterCache.hit.nbDesorbed = 0;
+		facetHitCache.hit.nbDesorbed = 0;
 		file->ReadLLong();
 	}
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
@@ -373,7 +393,7 @@ void Facet::LoadSYN(FileReader *file, int version, size_t nbVertex) {
 	if (version >= 10) {
 		file->ReadKeyword("nbHitEquiv"); file->ReadKeyword(":");file->ReadLLong();
 	}
-	counterCache.hit.nbMCHit = 0; counterCache.hit.nbHitEquiv = 0.0; 
+	facetHitCache.hit.nbMCHit = 0; facetHitCache.hit.nbHitEquiv = 0.0; 
 	if (version >= 3) {
 		file->ReadKeyword("fluxAbs"); file->ReadKeyword(":");
 		file->ReadDouble();
@@ -406,11 +426,11 @@ void Facet::LoadTXT(FileReader *file) {
 	// Read facet parameters from TXT format
 	sh.sticking = file->ReadDouble();
 	double o = file->ReadDouble();
-	/*sh.area =*/ file->ReadDouble();
-	counterCache.hit.nbDesorbed = (llong)(file->ReadDouble() + 0.5);
-	counterCache.hit.nbMCHit = (llong)(file->ReadDouble() + 0.5);
-	counterCache.hit.nbHitEquiv = static_cast<double>(counterCache.hit.nbMCHit);
-	counterCache.hit.nbAbsEquiv = (double)(llong)(file->ReadDouble() + 0.5);
+	/*wp.area =*/ file->ReadDouble();
+	facetHitCache.hit.nbDesorbed = (llong)(file->ReadDouble() + 0.5);
+	facetHitCache.hit.nbMCHit = (llong)(file->ReadDouble() + 0.5);
+	facetHitCache.hit.nbHitEquiv = static_cast<double>(facetHitCache.hit.nbMCHit);
+	facetHitCache.hit.nbAbsEquiv = (double)(llong)(file->ReadDouble() + 0.5);
 	sh.desorbType = (int)(file->ReadDouble() + 0.5);
 
 	// Convert opacity
@@ -477,7 +497,7 @@ void Facet::LoadTXT(FileReader *file) {
 
 	file->ReadDouble(); // Unused
 
-	if (counterCache.hit.nbDesorbed == 0)
+	if (facetHitCache.hit.nbDesorbed == 0)
 		sh.desorbType = DES_NONE;
 
 	if (IsTXTLinkFacet()) {
@@ -570,9 +590,9 @@ void Facet::SaveGEO(FileWriter *file, int idx) {
 	file->Write("  countRefl:"); file->Write(sh.countRefl, "\n");
 	file->Write("  countTrans:"); file->Write(sh.countTrans, "\n");
 	file->Write("  acMode:"); file->Write(sh.countACD, "\n");
-	file->Write("  nbAbs:"); file->Write((llong)counterCache.hit.nbAbsEquiv, "\n");
-	file->Write("  nbDes:"); file->Write(counterCache.hit.nbDesorbed, "\n");
-	file->Write("  nbHit:"); file->Write((llong)counterCache.hit.nbMCHit, "\n");
+	file->Write("  nbAbs:"); file->Write((llong)facetHitCache.hit.nbAbsEquiv, "\n");
+	file->Write("  nbDes:"); file->Write(facetHitCache.hit.nbDesorbed, "\n");
+	file->Write("  nbHit:"); file->Write((llong)facetHitCache.hit.nbMCHit, "\n");
 
 	// Version 2
 	file->Write("  temperature:"); file->Write(sh.temperature, "\n");
@@ -591,7 +611,7 @@ void Facet::SaveGEO(FileWriter *file, int idx) {
 	file->Write("}\n");
 }
 
-size_t Facet::GetGeometrySize()  {
+size_t Facet::GetGeometrySize()  { //for loader dataport
 
 	size_t s = sizeof(FacetProperties)
 		+ (sh.nbIndex * sizeof(size_t)) //indices
@@ -600,20 +620,20 @@ size_t Facet::GetGeometrySize()  {
 	// Size of the 'element area' array passed to the geometry buffer
 	if (sh.isTextured) s += sizeof(double)*sh.texWidth*sh.texHeight; //incbuff
 	if (sh.useOutgassingFile ) s += sizeof(double)*sh.outgassingMapWidth*sh.outgassingMapHeight;
-	if (sh.anglemapParams.hasRecorded) s += sizeof(size_t)*sh.anglemapParams.phiWidth*(sh.anglemapParams.thetaLowerRes + sh.anglemapParams.thetaHigherRes);
+	s += sh.anglemapParams.GetRecordedDataSize();
 	return s;
 
 }
 
-size_t Facet::GetHitsSize(size_t nbMoments)  {
+size_t Facet::GetHitsSize(size_t nbMoments)  { //for hits dataport
 
 	return   (1 + nbMoments)*(
 		sizeof(FacetHitBuffer) +
 		+(sh.texWidth*sh.texHeight * sizeof(TextureCell))
 		+ (sh.isProfile ? (PROFILE_SIZE * sizeof(ProfileSlice)) : 0)
 		+ (sh.countDirection ? (sh.texWidth*sh.texHeight * sizeof(DirectionCell)) : 0)
-		+ (sh.anglemapParams.hasRecorded ? sh.anglemapParams.phiWidth * (sh.anglemapParams.thetaLowerRes + sh.anglemapParams.thetaHigherRes) * sizeof(size_t) : 0)
-		);
+		+ sh.facetHistogramParams.GetDataSize()
+		) + sh.anglemapParams.GetRecordedDataSize();
 
 }
 
@@ -775,11 +795,11 @@ void Facet::BuildTexture(TextureCell *texBuffer, int textureMode, double min, do
 		/*
 		// Perform edge smoothing (only with mesh)
 		if( mesh ) {
-		for(int j=-1;j<=sh.texHeight;j++) {
-		for(int i=-1;i<=sh.texWidth;i++) {
-		bool doSmooth = (i<0) || (i>=sh.texWidth) ||
-		(j<0) || (j>=sh.texHeight) ||
-		mesh[i+j*sh.texWidth].area==0.0f;
+		for(int j=-1;j<=wp.texHeight;j++) {
+		for(int i=-1;i<=wp.texWidth;i++) {
+		bool doSmooth = (i<0) || (i>=wp.texWidth) ||
+		(j<0) || (j>=wp.texHeight) ||
+		mesh[i+j*wp.texWidth].area==0.0f;
 		if( doSmooth ) {
 		if( doLog ) {
 		val = (int)((log10(GetSmooth(i,j,texBuffer,dCoeff))-log10(min))*scaleFactor+0.5f);
@@ -1150,11 +1170,69 @@ double Facet::DensityCorrection() {
 	//However, in case of desorption or sticking, the real density is not twice the "seen" density, but a bit less, therefore this reduction factor
 	//If only desorption, or only absorption, the correction factor is 0.5, if no des/abs, it's 1.0, and in between, see below
 
-	if (counterCache.hit.nbMCHit > 0 || counterCache.hit.nbDesorbed > 0) {
-		if (counterCache.hit.nbAbsEquiv > 0.0 || counterCache.hit.nbDesorbed > 0) {//otherwise save calculation time
-			return 1.0 - (counterCache.hit.nbAbsEquiv + (double)counterCache.hit.nbDesorbed) / (counterCache.hit.nbHitEquiv + (double)counterCache.hit.nbDesorbed) / 2.0;
+	if (facetHitCache.hit.nbMCHit > 0 || facetHitCache.hit.nbDesorbed > 0) {
+		if (facetHitCache.hit.nbAbsEquiv > 0.0 || facetHitCache.hit.nbDesorbed > 0) {//otherwise save calculation time
+			return 1.0 - (facetHitCache.hit.nbAbsEquiv + (double)facetHitCache.hit.nbDesorbed) / (facetHitCache.hit.nbHitEquiv + (double)facetHitCache.hit.nbDesorbed) / 2.0;
 		}
 		else return 1.0;
 	}
 	else return 1.0;
+}
+
+void Facet::SerializeForLoader(cereal::BinaryOutputArchive& outputarchive) {
+
+		std::vector<double> outgMapVector(sh.useOutgassingFile ? sh.outgassingMapWidth*sh.outgassingMapHeight : 0);
+		memcpy(outgMapVector.data(), outgassingMap, sizeof(double)*(sh.useOutgassingFile ? sh.outgassingMapWidth*sh.outgassingMapHeight : 0));
+		std::vector<double> textIncVector;
+
+		// Add surface elements area (reciprocal)
+		if (sh.isTextured) {
+			textIncVector.resize(sh.texHeight*sh.texWidth);
+			if (cellPropertiesIds) {
+				size_t add = 0;
+				for (size_t j = 0; j < sh.texHeight; j++) {
+					for (size_t i = 0; i < sh.texWidth; i++) {
+						double area = GetMeshArea(add, true);
+
+						if (area > 0.0) {
+							// Use the sign bit to store isFull flag
+							textIncVector[add] = 1.0 / area;
+						}
+						else {
+							textIncVector[add] = 0.0;
+						}
+						add++;
+					}
+				}
+			}
+			else {
+
+				double rw = sh.U.Norme() / (double)(sh.texWidthD);
+				double rh = sh.V.Norme() / (double)(sh.texHeightD);
+				double area = rw * rh;
+				size_t add = 0;
+				for (int j = 0; j < sh.texHeight; j++) {
+					for (int i = 0; i < sh.texWidth; i++) {
+						if (area > 0.0) {
+							textIncVector[add] = 1.0 / area;
+						}
+						else {
+							textIncVector[add] = 0.0;
+						}
+						add++;
+					}
+				}
+			}
+		}
+
+		outputarchive(
+			CEREAL_NVP(sh), //Contains anglemapParams
+			CEREAL_NVP(indices),
+			CEREAL_NVP(vertices2)
+#ifdef MOLFLOW
+			, CEREAL_NVP(outgMapVector)
+			, CEREAL_NVP(textIncVector)
+#endif
+		);
+	
 }

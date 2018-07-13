@@ -1,21 +1,22 @@
 /*
-  File:        molflowSub.c
-  Description: Main function on the working sub process
-  Program:     MolFlow
-  Author:      R. KERSEVAN / J-L PONS / M ADY
-  Copyright:   E.S.R.F / CERN
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
-
 #define NOMINMAX
 //#include <windows.h>
 //#include <tlhelp32.h>
@@ -32,6 +33,7 @@
 #endif
 
 // Global process variables
+Simulation* sHandle; //Global handle to simulation, one per subprocess
 
 #define WAITTIME    100  // Answer in STOP mode
 //#define TIMEOUT     300  // Process kills itself after no heartbeat (seconds)
@@ -114,36 +116,35 @@ void SetErrorSub(const char *message) {
 
 char *GetSimuStatus() {
 
-  size_t sMode;
   static char ret[128];
   llong count = sHandle->totalDesorbed;
   llong max   = sHandle->ontheflyParams.desorptionLimit/sHandle->ontheflyParams.nbProcess;
 
-  sMode = sHandle->sMode;
-  if( GetLocalState()==PROCESS_RUNAC ) sMode = AC_MODE;
+  
+  if( GetLocalState()==PROCESS_RUNAC ) sHandle->wp.sMode = AC_MODE;
 
-  switch(sMode) {
+  switch(sHandle->wp.sMode) {
 
     case MC_MODE:
       if( max!=0 ) {
         double percent = (double)(count)*100.0 / (double)(max);
-        sprintf(ret,"(%s) MC %I64d/%I64d (%.1f%%)",sHandle->name,count,max,percent);
+        sprintf(ret,"(%s) MC %I64d/%I64d (%.1f%%)",sHandle->sh.name.c_str(),count,max,percent);
       } else {
-        sprintf(ret,"(%s) MC %I64d",sHandle->name,count);
+        sprintf(ret,"(%s) MC %I64d",sHandle->sh.name.c_str(),count);
       }
       break;
 
     case AC_MODE:
       if( sHandle->prgAC<100 ) {
-          sprintf(ret,"(%s) AC (%zdx%zd) (%zd%%)",sHandle->name,
+          sprintf(ret,"(%s) AC (%zdx%zd) (%zd%%)",sHandle->sh.name.c_str(),
                       sHandle->nbAC,sHandle->nbAC,sHandle->prgAC);
       } else {
         if( max!=0 ) {
           double percent = (double)(count)*100.0 / (double)(max);
-          sprintf(ret,"(%s) AC (%zdx%zd) %I64d/%I64d (%.1f%%)",sHandle->name,
+          sprintf(ret,"(%s) AC (%zdx%zd) %I64d/%I64d (%.1f%%)",sHandle->sh.name.c_str(),
                       sHandle->nbAC,sHandle->nbAC,count,max,percent);
         } else {
-          sprintf(ret,"(%s) AC (%zdx%zd) %I64d",sHandle->name,sHandle->nbAC,
+          sprintf(ret,"(%s) AC (%zdx%zd) %I64d",sHandle->sh.name.c_str(),sHandle->nbAC,
                       sHandle->nbAC,count);
         }
       }
@@ -188,7 +189,7 @@ void LoadAC() {
   ClearACMatrix();
 
   // Load mesh
-  loader = OpenDataport(loadDpName/*,prParam*/);
+  loader = OpenDataport(loadDpName,prParam);
   if( !loader ) {
     char err[512];
     sprintf(err,"Failed to open 'loader' dataport %s (%zd Bytes)",loadDpName, prParam);
@@ -229,7 +230,7 @@ void Load() {
   size_t hSize;
 
   // Load geometry
-  loader = OpenDataport(loadDpName/*,prParam*/);
+  loader = OpenDataport(loadDpName,prParam);
   if( !loader ) {
     char err[512];
     sprintf(err,"Failed to connect to 'loader' dataport %s (%zd Bytes)",loadDpName, prParam);
@@ -247,7 +248,7 @@ void Load() {
 
   //Connect to log dataport
   if (sHandle->ontheflyParams.enableLogging) {
-	  dpLog = OpenDataport(logDpName/*, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem)*/);
+	  dpLog = OpenDataport(logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
 	  if (!dpLog) {
 		  char err[512];
 		  sprintf(err, "Failed to connect to 'dpLog' dataport %s (%zd Bytes)", logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
@@ -260,7 +261,7 @@ void Load() {
 
   // Connect to hit dataport
   hSize = GetHitsSize();
-  dpHit = OpenDataport(hitsDpName/*,hSize*/);
+  dpHit = OpenDataport(hitsDpName,hSize);
   if( !dpHit ) {
 	  char err[512];
 	  sprintf(err, "Failed to connect to 'hits' dataport (%zd Bytes)", hSize);
@@ -276,7 +277,7 @@ void Load() {
 bool UpdateParams() {
 
 	// Load geometry
-	Dataport *loader = OpenDataport(loadDpName/*, prParam*/);
+	Dataport *loader = OpenDataport(loadDpName, prParam);
 	if (!loader) {
 		char err[512];
 		sprintf(err, "Failed to connect to 'loader' dataport %s (%zd Bytes)", loadDpName, prParam);
@@ -289,7 +290,7 @@ bool UpdateParams() {
 	CLOSEDP(loader);
 
 	if (sHandle->ontheflyParams.enableLogging) {
-		dpLog = OpenDataport(logDpName/*, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem)*/);
+		dpLog = OpenDataport(logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
 		if (!dpLog) {
 			char err[512];
 			sprintf(err, "Failed to connect to 'dpLog' dataport %s (%zd Bytes)", logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
@@ -323,7 +324,7 @@ int main(int argc,char* argv[])
   sprintf(hitsDpName,"MFLWHITS%s",argv[1]);
   sprintf(logDpName, "MFLWLOG%s", argv[1]);
 
-  dpControl = OpenDataport(ctrlDpName/*,sizeof(SHCONTROL)*/);
+  dpControl = OpenDataport(ctrlDpName,sizeof(SHCONTROL));
   if( !dpControl ) {
     printf("Usage: Cannot connect to MFLWCTRL%s\n",argv[1]);
     return 1;
@@ -331,7 +332,7 @@ int main(int argc,char* argv[])
 
   printf("Connected to %s (%zd bytes), molflowSub.exe #%d\n",ctrlDpName,sizeof(SHCONTROL),prIdx);
 
-  InitSimulation();
+  InitSimulation(); //Creates sHandle instance
 
   // Sub process ready
   SetReady();

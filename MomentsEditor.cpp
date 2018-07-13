@@ -1,19 +1,22 @@
 /*
-  File:        MomentsEditor.cpp
-  Description: Moments Editor
-  Program:     MolFlow
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
-
 #include "MomentsEditor.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
@@ -90,19 +93,19 @@ MomentsEditor::MomentsEditor(Worker *w) :GLWindow() {
 	windowLabel->SetBounds(15, 275, 170, 25);
 	Add(windowLabel);
 
-	//sprintf(tmp,"%g",work->timeWindowSize);
+	//sprintf(tmp,"%g",work->wp.wp.timeWindowSize);
 	windowSizeText = new GLTextField(0, "");
 	windowSizeText->SetBounds(120, 275, 60, 20);
 	Add(windowSizeText);
 
 	useMaxwellToggle = new GLToggle(0, "Use Maxwell-B. speed distr.");
 	useMaxwellToggle->SetBounds(15, 300, wD - 25, 20);
-	//useMaxwellToggle->SetState(work->useMaxwellDistribution);
+	//useMaxwellToggle->SetState(work->wp.useMaxwellDistribution);
 	Add(useMaxwellToggle);
 
 	calcConstantFlow = new GLToggle(0, "Calculate constant flow");
 	calcConstantFlow->SetBounds(15, 325, wD - 25, 20);
-	//useMaxwellToggle->SetState(work->useMaxwellDistribution);
+	//useMaxwellToggle->SetState(work->wp.useMaxwellDistribution);
 	Add(calcConstantFlow);
 
 	/*GLLabel *valveLabel = new GLLabel("Facets 1,2 open at:                   s");
@@ -162,9 +165,9 @@ void MomentsEditor::ProcessMessage(GLComponent *src, int message) {
 
 				work->moments = moments;
 				work->userMoments = userMoments;
-				work->timeWindowSize = window;
-				work->useMaxwellDistribution = useMaxwellToggle->GetState();
-				work->calcConstantFlow = calcConstantFlow->GetState();
+				work->wp.timeWindowSize = window;
+				work->wp.useMaxwellDistribution = useMaxwellToggle->GetState();
+				work->wp.calcConstantFlow = calcConstantFlow->GetState();
 
 				work->Reload();
 				if (mApp->timeSettings) mApp->timeSettings->RefreshMoments();
@@ -240,10 +243,10 @@ void MomentsEditor::Refresh() {
 	userMoments = work->userMoments;
 	moments = work->moments;
 	char tmp[128];
-	sprintf(tmp, "%g", work->timeWindowSize);
+	sprintf(tmp, "%g", work->wp.timeWindowSize);
 	windowSizeText->SetText(tmp);
-	useMaxwellToggle->SetState(work->useMaxwellDistribution);
-	calcConstantFlow->SetState(work->calcConstantFlow);
+	useMaxwellToggle->SetState(work->wp.useMaxwellDistribution);
+	calcConstantFlow->SetState(work->wp.calcConstantFlow);
 	RebuildList();
 }
 

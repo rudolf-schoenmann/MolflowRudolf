@@ -1,9 +1,9 @@
 /*
-File:        Worker.cpp
-Description: Sub processes handling
-Program:     MolFlow
-Author:      R. KERSEVAN / J-L PONS / M ADY
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
 Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,8 +14,9 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-*/
 
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #define NOMINMAX
 #include <Windows.h>
 #include "MolflowGeometry.h"
@@ -31,6 +32,14 @@ GNU General Public License for more details.
 //#include "Simulation.h" //SHELEM
 #include "GlobalSettings.h"
 #include "FacetAdvParams.h"
+#include <fstream>
+#include <istream>
+
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/utility.hpp>
+//#include <cereal/archives/xml.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 #include <fstream>
 
 #ifdef MOLFLOW
@@ -76,15 +85,15 @@ Worker::Worker() {
 	parameters = std::vector<Parameter>();
 	needsReload = true;  //When main and subprocess have different geometries, needs to reload (synchronize)
 	displayedMoment = 0; //By default, steady-state is displayed
-	timeWindowSize = 0.1;
-	useMaxwellDistribution = true;
-	calcConstantFlow = true;
-	distTraveledTotal_fullHitsOnly = 0.0;
-	gasMass = 28.0;
-	enableDecay = false;
-	halfLife = 1;
-	finalOutgassingRate = finalOutgassingRate_Pa_m3_sec = totalDesorbedMolecules = 0.0;
-	motionType = 0;
+	wp.timeWindowSize = 1E-10; //Dirac-delta desorption pulse at t=0
+	wp.useMaxwellDistribution = true;
+	wp.calcConstantFlow = true;
+	wp.gasMass = 28.0;
+	wp.enableDecay = false;
+	wp.halfLife = 1;
+	wp.finalOutgassingRate = wp.finalOutgassingRate_Pa_m3_sec = wp.totalDesorbedMolecules = 0.0;
+	wp.motionType = 0;
+	wp.sMode = MC_MODE;
 
 	//Common init
 	pid = _getpid();
@@ -106,11 +115,6 @@ Worker::Worker() {
 	dpHit = NULL;
 	dpLog = NULL;
 
-	hitCacheSize = 0;
-	nbMCHit = 0;
-	nbHitEquiv = 0.0;
-	nbLeakTotal = 0;
-	leakCacheSize = 0;
 	startTime = 0.0f;
 	stopTime = 0.0f;
 	simuTime = 0.0f;
@@ -230,7 +234,7 @@ void Worker::SaveGeometry(char *fileName, GLProgress *prg, bool askConfirm, bool
 					GLMessageBox::Display((char*)e.GetMsg(), "Error writing file.", GLDLG_OK, GLDLG_ICONERROR);
 					return;
 				}
-				geom->loaded_desorptionLimit = ontheflyParams.desorptionLimit;
+				
 				if (isTXT) geom->SaveTXT(f, dpHit, saveSelected);
 				else if (isGEO || isGEO7Z) {
 					/*
@@ -243,7 +247,7 @@ void Worker::SaveGeometry(char *fileName, GLProgress *prg, bool askConfirm, bool
 					HIT hitCache[HITCACHESIZE];
 					if (!crashSave && !saveSelected) GetHHit(hitCache, &nbHHitSave);
 					*/
-					geom->SaveGEO(f, prg, dpHit, this->userMoments, this, saveSelected, leakCache, &leakCacheSize, hitCache, &hitCacheSize, crashSave);
+					geom->SaveGEO(f, prg, dpHit, this, saveSelected, crashSave);
 				}
 				else if (isXML || isXMLzip) {
 					xml_document saveDoc;
@@ -265,7 +269,7 @@ void Worker::SaveGeometry(char *fileName, GLProgress *prg, bool askConfirm, bool
 							GetHHit(hitCache, &nbHHitSave);
 							*/
 
-							success = geom->SaveXML_simustate(saveDoc, this, buffer, gHits, leakCacheSize, hitCacheSize, leakCache, hitCache, prg, saveSelected);
+							success = geom->SaveXML_simustate(saveDoc, this, buffer, prg, saveSelected);
 							ReleaseDataport(dpHit);
 						}
 						catch (Error &e) {
@@ -443,14 +447,15 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 
+	ResetWorkerStats();
+
 	if (!insert) {
 		//Clear hits and leaks cache
-		memset(hitCache, 0, sizeof(HIT)*HITCACHESIZE);
-		memset(leakCache, 0, sizeof(LEAK)*LEAKCACHESIZE);
 		ResetMoments();
+		
 		//default values
-		enableDecay = false;
-		gasMass = 28;
+		wp.enableDecay = false;
+		wp.gasMass = 28;
 	}
 
 	/*
@@ -469,20 +474,14 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 	if (ext == "txt" || ext == "TXT") {
 
 		try {
-			if (!insert) ResetWorkerStats();
-			else mApp->changedSinceSave = true;
+			
+			if (insert) mApp->changedSinceSave = true;
 
 			f = new FileReader(fileName);
 			
 			if (!insert) {
-				geom->LoadTXT(f, progressDlg);
+				geom->LoadTXT(f, progressDlg, this);
 				SAFE_DELETE(f);
-				nbMCHit = geom->loaded_nbMCHit;
-				nbHitEquiv = geom->loaded_nbHitEquiv;
-				nbDesorption = geom->loaded_nbDesorption;
-				nbAbsEquiv = geom->loaded_nbAbsEquiv;
-				ontheflyParams.desorptionLimit = geom->loaded_desorptionLimit;
-				nbLeakTotal = geom->loaded_nbLeak;
 				//RealReload();
 				strcpy(fullFileName, fileName);
 			}
@@ -490,11 +489,6 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 
 				geom->InsertTXT(f, progressDlg, newStr);
 				SAFE_DELETE(f);
-				nbMCHit = 0;
-				nbHitEquiv = 0.0;
-				nbDesorption = 0;
-				ontheflyParams.desorptionLimit = 0;
-				nbLeakTotal = 0;
 				Reload();
 			}
 		}
@@ -532,7 +526,6 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 			if (ret != GLDLG_CANCEL_U) {
 				progressDlg->SetMessage("Resetting worker...");
 				progressDlg->SetVisible(true);
-				ResetWorkerStats();				
 				progressDlg->SetMessage("Reading geometry...");
 				f = new FileReader(fileName);
 				if (!insert) {
@@ -562,7 +555,6 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 	else if (ext == "str" || ext == "STR") {
 		if (insert) throw Error("STR file inserting is not supported.");
 		try {
-			ResetWorkerStats();
 			f = new FileReader(fileName);
 			progressDlg->SetVisible(true);
 			geom->LoadSTR(f, progressDlg);
@@ -597,20 +589,14 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 			
 			if (!insert) {
 				progressDlg->SetMessage("Resetting worker...");
-				ResetWorkerStats();
 			
-				geom->LoadSYN(f, progressDlg, &version);
+				geom->LoadSYN(f, progressDlg, &version, this);
 				SAFE_DELETE(f);
 				ontheflyParams.desorptionLimit = 0;
 			}
 			else { //insert
 				geom->InsertSYN(f, progressDlg, newStr);
 				SAFE_DELETE(f);
-				nbLeakTotal = 0;
-				nbMCHit = 0;
-				nbHitEquiv = 0.0;
-				nbDesorption = 0;
-				ontheflyParams.desorptionLimit = geom->loaded_desorptionLimit;
 			}
 
 			progressDlg->SetMessage("Reloading worker with new geometry...");
@@ -653,32 +639,17 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 				toOpen = fileName;
 				f = new FileReader(fileName); //geo file, open it directly
 			}
-			progressDlg->SetMessage("Resetting worker...");
-			ResetWorkerStats();
 			if (insert) mApp->changedSinceSave = true;
 
-			LEAK loaded_leakCache[LEAKCACHESIZE];
-			size_t loaded_nbLeak;
-			HIT hitCache[HITCACHESIZE];
 			if (!insert) {
 
-				geom->LoadGEO(f, progressDlg, loaded_leakCache, &loaded_nbLeak, hitCache, &hitCacheSize, &version, this);
+				geom->LoadGEO(f, progressDlg, &version, this);
 				
-				//copy temp values from geom to worker:
-				nbLeakTotal = geom->loaded_nbLeak;
-				nbMCHit = geom->loaded_nbMCHit;
-				nbHitEquiv = geom->loaded_nbHitEquiv;
-				nbDesorption = geom->loaded_nbDesorption;
-				ontheflyParams.desorptionLimit = geom->loaded_desorptionLimit;
-				nbAbsEquiv = geom->loaded_nbAbsEquiv;
-				distTraveled_total = geom->distTraveled_total;
-				distTraveledTotal_fullHitsOnly = geom->distTraveledTotal_fullHitsOnly;
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload(); //for the loading of textures
 				if (version >= 8) geom->LoadProfileGEO(f, dpHit, version);
-				SetLeakCache(loaded_leakCache, &loaded_nbLeak, dpHit);
-				SetHitCache(hitCache, &hitCacheSize, dpHit);
-				WriteHitBuffer(); //Global and facet hit counters
+				SendToHitBuffer(); //Global hit counters and hit/leak cache
+				SendFacetHitCounts(dpHit); // From facetHitCache to dpHit's const.flow counter
 				
 				progressDlg->SetMessage("Loading textures...");
 				LoadTexturesGEO(f, version);
@@ -760,7 +731,7 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 					if (ext == "xml" || ext == "zip")
 						progressDlg->SetMessage("Restoring simulation state...");
 					geom->LoadXML_simustate(loadXML, dpHit, this, progressDlg);
-					WriteHitBuffer(true); //Send hits without sending facet counters, as they are directly written during the load process
+					SendToHitBuffer(); //Send hits without sending facet counters, as they are directly written during the load process (mutiple moments)
 					RebuildTextures();
 				}
 				catch (Error &e) {
@@ -905,7 +876,7 @@ void Worker::StartStop(float appTime , size_t sMode) {
 			isRunning = true;
 			calcAC = false;
 
-			this->sMode = sMode;
+			wp.sMode = sMode;
 
 			Start();
 
@@ -966,9 +937,9 @@ void Worker::Update(float appTime) {
 				SHGHITS *gHits = (SHGHITS *)buffer;
 
 				// Copy Global hits and leaks
-				nbMCHit = gHits->total.hit.nbMCHit;
-				nbAbsEquiv = gHits->total.hit.nbAbsEquiv;
-				nbDesorption = gHits->total.hit.nbDesorbed;				
+				nbMCHit = gHits->globalHits.hit.nbMCHit;
+				nbAbsEquiv = gHits->globalHits.hit.nbAbsEquiv;
+				nbDesorption = gHits->globalHits.hit.nbDesorbed;				
 				distTraveled_total = gHits->distTraveled_total;
 				distTraveledTotal_fullHitsOnly = gHits->distTraveledTotal_fullHitsOnly;
 				
@@ -983,7 +954,7 @@ void Worker::Update(float appTime) {
 				int nbFacet = geom->GetNbFacet();
 				for (int i = 0; i < nbFacet; i++) {
 					Facet *f = geom->GetFacet(i);
-					f->counterCache=(*((FacetHitBuffer*)(buffer + f->sh.hitOffset+displayedMoment*sizeof(FacetHitBuffer))));
+					f->facetHitCache=(*((FacetHitBuffer*)(buffer + f->wp.hitOffset+displayedMoment*sizeof(FacetHitBuffer))));
 				}
 				try {
 					if (mApp->needsTexture || mApp->needsDirection) geom->BuildFacetTextures(buffer,mApp->needsTexture,mApp->needsDirection);
@@ -1002,31 +973,14 @@ void Worker::Update(float appTime) {
 }
 */
 
-void Worker::WriteHitBuffer(bool skipFacetHits ) {
-	//if (!needsReload) {
+void Worker::SendToHitBuffer(bool skipFacetHits ) {
 	if (dpHit) {
 		if (AccessDataport(dpHit)) {
 
 			GlobalHitBuffer *gHits = (GlobalHitBuffer *)dpHit->buff;
 
-			gHits->total.hit.nbMCHit = nbMCHit;
-			gHits->total.hit.nbHitEquiv = nbHitEquiv;
-			gHits->nbLeakTotal = nbLeakTotal;
-			gHits->total.hit.nbDesorbed = nbDesorption;
-			gHits->total.hit.nbAbsEquiv = nbAbsEquiv;
-			gHits->distTraveled_total = distTraveled_total;
-			gHits->distTraveledTotal_fullHitsOnly = distTraveledTotal_fullHitsOnly;
+			*gHits = globalHitCache;
 
-			if (!skipFacetHits) {
-
-				size_t nbFacet = geom->GetNbFacet();
-				for (size_t i = 0; i < nbFacet; i++) {
-					Facet *f = geom->GetFacet(i);
-					/*for (size_t m = 0;m <= moments.size();m++)*/
-					*((FacetHitBuffer*)((BYTE*)dpHit->buff + f->sh.hitOffset /* + m * sizeof(FacetHitBuffer) */)) = f->counterCache;
-				}
-
-			}
 			ReleaseDataport(dpHit);
 
 		}
@@ -1120,20 +1074,33 @@ void Worker::RealReload() { //Sharing geometry with workers
 	// Create the temporary geometry shared structure
 	progressDlg->SetMessage("Creating dataport...");
 
-	size_t loadSize = geom->GetGeometrySize();
+	
 	if (ontheflyParams.enableLogging) {
 		dpLog = CreateDataport(logDpName, sizeof(size_t) + sizeof(ParticleLoggerItem)*ontheflyParams.logLimit);
 		if (!dpLog)
 			throw Error("Failed to create 'dpLog' dataport.\nMost probably out of memory.\nReduce number of logged particles in Particle Logger.");
 		//*((size_t*)dpLog->buff) = 0; //Automatic 0-filling
 	}
+
+	std::string loaderString = SerializeForLoader().str();
+
+	//size_t loadSize = geom->GetGeometrySize();
+	//Dataport *loader = CreateDataport(loadDpName, loadSize);
+
+	size_t loadSize = loaderString.size();
+
 	Dataport *loader = CreateDataport(loadDpName, loadSize);
 	if( !loader )
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader, (DWORD)(3000 + ontheflyParams.nbProcess*loadSize / 10000));
 	progressDlg->SetMessage("Assembling geometry to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,ontheflyParams);
+	//geom->CopyGeometryBuffer((BYTE *)loader->buff,ontheflyParams);
+
+	BYTE* buffer = (BYTE*)loader->buff;
+	//memcpy(loader->buff, loaderString.c_str(), loadSize);
+	std::copy(loaderString.begin(), loaderString.end(), buffer);
+
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -1187,6 +1154,28 @@ void Worker::RealReload() { //Sharing geometry with workers
 	SAFE_DELETE(progressDlg);
 }
 
+std::ostringstream Worker::SerializeForLoader()
+{
+	//std::ofstream os("out.xml");
+	std::ostringstream result;
+	cereal::BinaryOutputArchive outputarchive(result);
+
+	outputarchive(
+		CEREAL_NVP(wp),
+		CEREAL_NVP(ontheflyParams),
+		CEREAL_NVP(CDFs),
+		CEREAL_NVP(IDs),
+		CEREAL_NVP(parameters),
+		CEREAL_NVP(temperatures),
+		CEREAL_NVP(moments),
+		CEREAL_NVP(desorptionParameterIDs)
+	); //Worker
+
+	geom->SerializeForLoader(outputarchive);
+
+	return result;
+}
+
 void Worker::ClearHits(bool noReload) {
 	try {
 		if (!noReload && needsReload) RealReload();
@@ -1205,13 +1194,8 @@ void Worker::ClearHits(bool noReload) {
 
 void Worker::ResetWorkerStats() {
 
-	nbAbsEquiv = 0.0;
-	nbDesorption = 0;
-	nbMCHit = 0;
-	nbHitEquiv = 0.0;
-	nbLeakTotal = 0;
-	distTraveled_total = 0.0;
-	distTraveledTotal_fullHitsOnly = 0.0;
+	memset(&globalHitCache, 0, sizeof(GlobalHitBuffer));
+
 
 }
 
@@ -1229,14 +1213,14 @@ void Worker::Start() {
 	if (!found)
 		throw Error("No desorption facet found");
 
-	if (!(totalDesorbedMolecules>0.0))
+	if (!(wp.totalDesorbedMolecules>0.0))
 		throw Error("Total outgassing is zero.");
 
 	if (ontheflyParams.nbProcess == 0)
 
 		throw Error("No sub process found. (Simulation not available)");
 
-	if (!ExecuteAndWait(COMMAND_START, PROCESS_RUN, sMode))
+	if (!ExecuteAndWait(COMMAND_START, PROCESS_RUN, wp.sMode))
 		ThrowSubProcError();
 }
 
@@ -1282,23 +1266,23 @@ std::vector<double> Worker::ParseMoment(std::string userInput) {
 
 void Worker::ResetMoments() {
 	displayedMoment = 0;
-	moments = std::vector<double>();
-	userMoments = std::vector<std::string>();
+	moments.swap(std::vector<double>());
+	userMoments.swap(std::vector<std::string>());
 }
 
 double Worker::GetMoleculesPerTP(size_t moment)
 //Returns how many physical molecules one test particle represents
 {
-	if (nbDesorption == 0) return 0; //avoid division by 0
+	if (globalHitCache.globalHits.hit.nbDesorbed == 0) return 0; //avoid division by 0
 	if (moment == 0) {
 		//Constant flow
 		//Each test particle represents a certain real molecule influx per second
-		return finalOutgassingRate / nbDesorption;
+		return wp.finalOutgassingRate / globalHitCache.globalHits.hit.nbDesorbed;
 	}
 	else {
 		//Time-dependent mode
 		//Each test particle represents a certain absolute number of real molecules
-		return (totalDesorbedMolecules / timeWindowSize) / nbDesorption;
+		return (wp.totalDesorbedMolecules / wp.timeWindowSize) / globalHitCache.globalHits.hit.nbDesorbed;
 	}
 }
 
@@ -1437,10 +1421,10 @@ void Worker::AnalyzeSYNfile(char *fileName, size_t *nbFacet, size_t *nbTextured,
 void Worker::PrepareToRun() {
 
 	//determine latest moment
-	latestMoment = 1E-10;
+	wp.latestMoment = 1E-10;
 	for (size_t i = 0; i<moments.size(); i++)
-		if (moments[i]>latestMoment) latestMoment = moments[i];
-	latestMoment += timeWindowSize / 2.0;
+		if (moments[i]>wp.latestMoment) wp.latestMoment = moments[i];
+	wp.latestMoment += wp.timeWindowSize / 2.0;
 
 	Geometry *g = GetGeometry();
 	//Generate integrated desorption functions
@@ -1521,14 +1505,14 @@ void Worker::PrepareToRun() {
 		if (f->sh.anglemapParams.record) {
 			if (!f->sh.anglemapParams.hasRecorded) {
 				//Initialize angle map
-				f->angleMapCache = (size_t*)malloc(f->sh.anglemapParams.phiWidth * (f->sh.anglemapParams.thetaLowerRes + f->sh.anglemapParams.thetaHigherRes) * sizeof(size_t));
+				f->angleMapCache = (size_t*)malloc(f->sh.anglemapParams.GetDataSize());
 				if (!f->angleMapCache) {
 					std::stringstream tmp;
 					tmp << "Not enough memory for incident angle map on facet " << i + 1;
 					throw Error(tmp.str().c_str());
 				}
 				//Set values to zero
-				memset(f->angleMapCache, 0, f->sh.anglemapParams.phiWidth * (f->sh.anglemapParams.thetaLowerRes + f->sh.anglemapParams.thetaHigherRes) * sizeof(size_t));
+				memset(f->angleMapCache, 0, f->sh.anglemapParams.GetDataSize());
 				f->sh.anglemapParams.hasRecorded = true;
 				if (f->selected) needsAngleMapStatusRefresh = true;
 			}
@@ -1553,7 +1537,7 @@ int Worker::GetCDFId(double temperature) {
 int Worker::GenerateNewCDF(double temperature){
 	size_t i = temperatures.size();
 	temperatures.push_back(temperature);
-	CDFs.push_back(Generate_CDF(temperature, gasMass, CDF_SIZE));
+	CDFs.push_back(Generate_CDF(temperature, wp.gasMass, CDF_SIZE));
 	return (int)i;
 }
 
@@ -1575,7 +1559,7 @@ int Worker::GetIDId(int paramId) {
 
 void Worker::CalcTotalOutgassing() {
 	// Compute the outgassing of all source facet
-	totalDesorbedMolecules = finalOutgassingRate_Pa_m3_sec = finalOutgassingRate = 0.0;
+	wp.totalDesorbedMolecules = wp.finalOutgassingRate_Pa_m3_sec = wp.finalOutgassingRate = 0.0;
 	Geometry *g = GetGeometry();
 
 	for (int i = 0; i < g->GetNbFacet(); i++) {
@@ -1583,23 +1567,23 @@ void Worker::CalcTotalOutgassing() {
 		if (f->sh.desorbType != DES_NONE) { //there is a kind of desorption
 			if (f->sh.useOutgassingFile) { //outgassing file
 				for (int l = 0; l < (f->sh.outgassingMapWidth*f->sh.outgassingMapHeight); l++) {
-					totalDesorbedMolecules += latestMoment * f->outgassingMap[l] / (1.38E-23*f->sh.temperature);
-					finalOutgassingRate += f->outgassingMap[l] / (1.38E-23*f->sh.temperature);
-					finalOutgassingRate_Pa_m3_sec += f->outgassingMap[l];
+					wp.totalDesorbedMolecules += wp.latestMoment * f->outgassingMap[l] / (1.38E-23*f->sh.temperature);
+					wp.finalOutgassingRate += f->outgassingMap[l] / (1.38E-23*f->sh.temperature);
+					wp.finalOutgassingRate_Pa_m3_sec += f->outgassingMap[l];
 				}
 			}
 			else { //regular outgassing
 				if (f->sh.outgassing_paramId == -1) { //constant outgassing
-					totalDesorbedMolecules += latestMoment * f->sh.outgassing / (1.38E-23*f->sh.temperature);
-					finalOutgassingRate += f->sh.outgassing / (1.38E-23*f->sh.temperature);  //Outgassing molecules/sec
-					finalOutgassingRate_Pa_m3_sec += f->sh.outgassing;
+					wp.totalDesorbedMolecules += wp.latestMoment * f->sh.outgassing / (1.38E-23*f->sh.temperature);
+					wp.finalOutgassingRate += f->sh.outgassing / (1.38E-23*f->sh.temperature);  //Outgassing molecules/sec
+					wp.finalOutgassingRate_Pa_m3_sec += f->sh.outgassing;
 				}
 				else { //time-dependent outgassing
-					totalDesorbedMolecules += IDs[f->sh.IDid].back().second / (1.38E-23*f->sh.temperature);
+					wp.totalDesorbedMolecules += IDs[f->sh.IDid].back().second / (1.38E-23*f->sh.temperature);
 					size_t lastIndex = parameters[f->sh.outgassing_paramId].GetSize() - 1;
 					double finalRate_mbar_l_s = parameters[f->sh.outgassing_paramId].GetY(lastIndex);
-					finalOutgassingRate += finalRate_mbar_l_s *0.100 / (1.38E-23*f->sh.temperature); //0.1: mbar*l/s->Pa*m3/s
-					finalOutgassingRate_Pa_m3_sec += finalRate_mbar_l_s *0.100;
+					wp.finalOutgassingRate += finalRate_mbar_l_s *0.100 / (1.38E-23*f->sh.temperature); //0.1: mbar*l/s->Pa*m3/s
+					wp.finalOutgassingRate_Pa_m3_sec += finalRate_mbar_l_s *0.100;
 				}
 			}
 		}
@@ -1652,7 +1636,7 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 	//First, let's check at which index is the latest moment
 	size_t indexBeforeLastMoment;
 	for (indexBeforeLastMoment = 0; indexBeforeLastMoment < parameters[paramId].GetSize() &&
-		(parameters[paramId].GetX(indexBeforeLastMoment) < latestMoment); indexBeforeLastMoment++);
+		(parameters[paramId].GetX(indexBeforeLastMoment) < wp.latestMoment); indexBeforeLastMoment++);
 		if (indexBeforeLastMoment >= parameters[paramId].GetSize()) indexBeforeLastMoment = parameters[paramId].GetSize() - 1; //not found, set as last moment
 
 	//Construct integral from 0 to latest moment
@@ -1681,15 +1665,15 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 		}
 	}
 
-	//latestMoment
-	double valueAtLatestMoment = parameters[paramId].InterpolateY(latestMoment,false);
-	if (IsEqual(valueAtLatestMoment , parameters[paramId].GetY(indexBeforeLastMoment))) //two equal values follow, simple integration by multiplying
-		ID.push_back(std::make_pair(latestMoment,
+	//wp.latestMoment
+	double valueAtlatestMoment = parameters[paramId].InterpolateY(wp.latestMoment,false);
+	if (IsEqual(valueAtlatestMoment , parameters[paramId].GetY(indexBeforeLastMoment))) //two equal values follow, simple integration by multiplying
+		ID.push_back(std::make_pair(wp.latestMoment,
 		ID.back().second +
-		(latestMoment - parameters[paramId].GetX(indexBeforeLastMoment))*parameters[paramId].GetY(indexBeforeLastMoment)*0.100));
+		(wp.latestMoment - parameters[paramId].GetX(indexBeforeLastMoment))*parameters[paramId].GetY(indexBeforeLastMoment)*0.100));
 	else { //difficult case, we'll integrate by dividing two 5equal sections
 		for (double delta = 0.0; delta < 1.0001; delta += 0.05) {
-			double delta_t = latestMoment - parameters[paramId].GetX(indexBeforeLastMoment);
+			double delta_t = wp.latestMoment - parameters[paramId].GetX(indexBeforeLastMoment);
 			double time = parameters[paramId].GetX(indexBeforeLastMoment) + delta*delta_t;
 			double avg_value = (parameters[paramId].GetY(indexBeforeLastMoment)*0.100 + parameters[paramId].InterpolateY(time, false)*0.100) / 2.0;
 			ID.push_back(std::make_pair(time,
@@ -1724,3 +1708,11 @@ throw Error("Error compressing ZIP file.");
 CloseZip(hz);
 return 0;
 }*/
+
+void Worker::SendFacetHitCounts(Dataport* dpHit) {
+	size_t nbFacet = geom->GetNbFacet();
+	for (size_t i = 0; i < nbFacet; i++) {
+		Facet *f = geom->GetFacet(i);
+		*((FacetHitBuffer*)((BYTE*)dpHit->buff + f->sh.hitOffset )) = f->facetHitCache; //Only const.flow
+	}
+}

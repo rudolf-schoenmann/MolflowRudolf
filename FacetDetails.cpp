@@ -1,21 +1,22 @@
 /*
-  File:        FacetDetails.cpp
-  Description: Facet details window
-  Program:     MolFlow
-  Author:      R. KERSEVAN / J-L PONS / M ADY
-  Copyright:   E.S.R.F / CERN
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
-
 #include "FacetDetails.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
@@ -265,8 +266,13 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f,size_t mode) {
       sprintf(ret,"%g",f->sh.opacity);
       break;
     case 3:
-      sprintf(ret,"%zd",f->sh.superIdx+1);
-      break;
+	{
+		std::ostringstream out;
+		if (f->sh.superIdx == -1) out << "All";
+		else out << (f->sh.superIdx + 1);
+		sprintf(ret, "%s", out.str().c_str());
+		break;
+	}
     case 4:
       sprintf(ret,"%zd",f->sh.superDest);
       break;
@@ -318,45 +324,45 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f,size_t mode) {
 	case 18: //imp.rate
 	{
 	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment);  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
-	sprintf(ret, "%g", f->counterCache.hit.nbHitEquiv / f->GetArea()*dCoef);
+	sprintf(ret, "%g", f->facetHitCache.hit.nbHitEquiv / f->GetArea()*dCoef);
 	//11.77=sqrt(8*8.31*293.15/3.14/0.028)/4/10
 	break; }
 	case 19: //particle density
 	{
 	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment)*f->DensityCorrection();  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar	
 	
-	sprintf(ret, "%g", f->counterCache.hit.sum_1_per_ort_velocity / f->GetArea()*dCoef);
+	sprintf(ret, "%g", f->facetHitCache.hit.sum_1_per_ort_velocity / f->GetArea()*dCoef);
 
 	break; }
 	case 20: //gas density
 	{
 	double dCoef =  1E4 * worker->GetMoleculesPerTP(worker->displayedMoment)*f->DensityCorrection();  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
 	
-	sprintf(ret, "%g", f->counterCache.hit.sum_1_per_ort_velocity / f->GetArea()*dCoef*mApp->worker.gasMass / 1000.0 / 6E23);
+	sprintf(ret, "%g", f->facetHitCache.hit.sum_1_per_ort_velocity / f->GetArea()*dCoef*mApp->worker.wp.gasMass / 1000.0 / 6E23);
 	break; }
 	case 21: //avg.pressure
 	{
-	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment) * (worker->gasMass / 1000 / 6E23) * 0.0100;  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
+	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment) * (worker->wp.gasMass / 1000 / 6E23) * 0.0100;  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
 	
-	sprintf(ret, "%g", f->counterCache.hit.sum_v_ort*dCoef / f->GetArea());
+	sprintf(ret, "%g", f->facetHitCache.hit.sum_v_ort*dCoef / f->GetArea());
 	break; }
 	case 22: //avg. gas speed (estimate)
-		/*sprintf(ret, "%g", 4.0*(double)(f->counterCache.hit.nbMCHit+f->counterCache.hit.nbDesorbed) / f->counterCache.hit.sum_1_per_ort_velocity);*/
-		sprintf(ret, "%g", (f->counterCache.hit.nbHitEquiv + static_cast<double>(f->counterCache.hit.nbDesorbed)) / f->counterCache.hit.sum_1_per_velocity);
+		/*sprintf(ret, "%g", 4.0*(double)(f->facetHitCache.hit.nbMCHit+f->facetHitCache.hit.nbDesorbed) / f->facetHitCache.hit.sum_1_per_ort_velocity);*/
+		sprintf(ret, "%g", (f->facetHitCache.hit.nbHitEquiv + static_cast<double>(f->facetHitCache.hit.nbDesorbed)) / f->facetHitCache.hit.sum_1_per_velocity);
 		//<v_surf>=2*<v_surf_ort>
 		//<v_gas>=1/<1/v_surf>
 		break;
 	case 23:
-		sprintf(ret,"%I64d",f->counterCache.hit.nbMCHit);
+		sprintf(ret,"%I64d",f->facetHitCache.hit.nbMCHit);
 		break;
 	case 24:
-		sprintf(ret, "%g", f->counterCache.hit.nbHitEquiv);
+		sprintf(ret, "%g", f->facetHitCache.hit.nbHitEquiv);
 		break;
 	case 25:
-		sprintf(ret,"%I64d",f->counterCache.hit.nbDesorbed);
+		sprintf(ret,"%I64d",f->facetHitCache.hit.nbDesorbed);
 		break;
 	case 26:
-		sprintf(ret,"%g",f->counterCache.hit.nbAbsEquiv);
+		sprintf(ret,"%g",f->facetHitCache.hit.nbAbsEquiv);
 		break;
   }
 
@@ -401,7 +407,7 @@ void FacetDetails::UpdateTable() {
   
 
   size_t nbS = 0;
-  for(auto sel:selectedFacets) {
+  for(auto& sel:selectedFacets) {
     Facet *f = geom->GetFacet(sel);
     for(size_t j=0;j<nbCol;j++)
         facetListD->SetValueAt(j,nbS,FormatCell(sel,f,shown[j]));

@@ -86,6 +86,7 @@ Worker::Worker() {
 	halfLife = 1;
 	finalOutgassingRate = finalOutgassingRate_Pa_m3_sec = totalDesorbedMolecules = 0.0;
 	motionType = 0;
+	globalHistogramParams.record = false;
 
 	//Common init
 	pid = _getpid();

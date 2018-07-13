@@ -1,3 +1,22 @@
+/*
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*/
 #pragma once
 #include "GLApp/GlTypes.h"
 //#include "Buffer_shared.h"
@@ -42,19 +61,19 @@ typedef float ACFLOAT;
 #define HITMAX 1E38
 class ProfileSlice {
 public:
-	double countEquiv;
-	double sum_v_ort;
-	double sum_1_per_ort_velocity;
+	double countEquiv=0.0;
+	double sum_v_ort=0.0;
+	double sum_1_per_ort_velocity=0.0;
 	ProfileSlice& operator+=(const ProfileSlice& rhs);
 };
 
 class TextureCell {
 public:
-	double countEquiv;
-	double sum_v_ort_per_area;
-	double sum_1_per_ort_velocity;
+	double countEquiv=0.0;
+	double sum_v_ort_per_area=0.0;
+	double sum_1_per_ort_velocity=0.0;
 	TextureCell& operator+=(const TextureCell& rhs);
-} ;
+};
 
 //Texture limit types
 typedef struct {
@@ -80,6 +99,33 @@ public:
 	double thetaLimit; //angle map can have a different resolution under and over the limit. Must be between 0 and PI/2
 	size_t thetaLowerRes; //resolution between 0 and angleMapThetaLimit
 	size_t thetaHigherRes; //resolution between angleMapThetaLimit and PI/2
+	
+	template<class Archive>
+	void serialize(Archive & archive)
+	{
+		archive(
+			   record, // Record incident angle 2-dim distribution
+		 hasRecorded,
+		 phiWidth, //resolution between -PI and +PI
+		 thetaLimit, //angle map can have a different resolution under and over the limit. Must be between 0 and PI/2
+		 thetaLowerRes, //resolution between 0 and angleMapThetaLimit
+		 thetaHigherRes //resolution between angleMapThetaLimit and PI/2
+		);
+	}
+
+	size_t GetMapSize() {
+		return phiWidth * (thetaLowerRes + thetaHigherRes);
+	}
+	size_t GetRecordedMapSize() {
+		if (!hasRecorded) return 0;
+		else return GetMapSize();
+	}
+	size_t GetDataSize() {
+		return sizeof(size_t)*GetMapSize();
+	}
+	size_t GetRecordedDataSize() {
+		return sizeof(size_t)*GetRecordedMapSize();
+	}
 };
 
 class Reflection {
@@ -87,6 +133,12 @@ public:
 	double diffusePart;
 	double specularPart;
 	double cosineExponent; //Cos^N part: 1-diffuse-specular
+	
+	template<class Archive>
+	void serialize(Archive & archive)
+	{
+		archive(diffusePart, specularPart, cosineExponent);
+	}
 };
 
 //Just for AC matrix calculation in Molflow, old mesh structure:

@@ -1,19 +1,22 @@
 /*
-  File:        ParameterEditor.cpp
-  Description: Parameter Editor
-  Program:     MolFlow
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
-
 #include "ParameterEditor.h"
 #include "File.h"
 #include "GLApp/GLToolkit.h"
@@ -198,7 +201,7 @@ void ParameterEditor::ProcessMessage(GLComponent *src,int message) {
 				work->Reload();
 			}
 		} else if (src == deleteButton) {
-			if (strcmp(selectorCombo->GetSelectedValue(), "New...") == 0) return;
+			if (selectorCombo->GetSelectedValue() == "New...") return;
 			if (mApp->AskToReset()) {
 				work->parameters.erase(work->parameters.begin() + selectorCombo->GetSelectedIndex()-1);
 				UpdateCombo();
@@ -332,7 +335,7 @@ void ParameterEditor::LoadCSV() {
 		if (GLDLG_OK != GLMessageBox::Display(tmp, "Warning", GLDLG_OK|GLDLG_CANCEL, GLDLG_ICONWARNING)) return;
 	}
 	userValues = std::vector<std::pair<std::string, std::string>>();
-	for (auto row :table) {
+	for (auto& row :table) {
 			std::string val1, val2;
 			if (row.size()>=1) val1 = row[0];
 			if (row.size()>=2) val2 = row[1];
@@ -382,7 +385,7 @@ bool ParameterEditor::ValidateInput() {
 		return false;
 	}
 	if (selectorCombo->GetSelectedIndex() == 0) {
-		for (auto p : work->parameters) {
+		for (auto& p : work->parameters) {
 			if (tempName.compare(p.name) == 0) {
 				GLMessageBox::Display("This parameter name is already used", "Invalid parameter definition", GLDLG_OK, GLDLG_ICONWARNING);
 				return false;
