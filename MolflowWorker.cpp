@@ -55,6 +55,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "ZipUtils/unzip.h"
 #include "File.h" //File utils (Get extension, etc)
 
+
+#include <fileapi.h>
 /*
 //Leak detection
 #ifdef _DEBUG
@@ -1715,4 +1717,10 @@ void Worker::SendFacetHitCounts(Dataport* dpHit) {
 		Facet *f = geom->GetFacet(i);
 		*((FacetHitBuffer*)((BYTE*)dpHit->buff + f->sh.hitOffset )) = f->facetHitCache; //Only const.flow
 	}
+}
+
+void Worker::ExportBuffer()
+{ 
+	//dpHit->buff;
+	//mApp->Exit(); //just to test
 }

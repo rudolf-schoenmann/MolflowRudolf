@@ -144,6 +144,7 @@ public:
     void BuildPipe(double ratio,int steps=0);
 	void EmptyGeometry();
 	void CrashHandler(Error *e);
+	void ExportBufferToFile(); //new function to export Buffer for Simulation on Linux HPC, added by Rudi.
 	
 protected:
 	void LoadParameterCatalog();

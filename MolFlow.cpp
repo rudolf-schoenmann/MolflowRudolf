@@ -67,6 +67,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "ParticleLogger.h"
 #include "HistogramSettings.h"
 #include "HistogramPlotter.h"
+#include <iostream>
 
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
@@ -149,6 +150,7 @@ MolFlow *mApp;
 #define MENU_FILE_EXPORTTEXTURE_AVG_V_COORD  177
 #define MENU_FILE_EXPORTTEXTURE_V_VECTOR_COORD  178
 #define MENU_FILE_EXPORTTEXTURE_N_VECTORS_COORD  179
+#define MENU_FILE_EXPORTBUFFER 180
 
 #define MENU_TOOLS_MOVINGPARTS 410
 
@@ -317,7 +319,7 @@ int MolFlow::OneTimeSceneInit()
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Avg. Velocity (m/s)", MENU_FILE_EXPORTTEXTURE_AVG_V);
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Velocity vector (m/s)", MENU_FILE_EXPORTTEXTURE_V_VECTOR);
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("# of velocity vectors", MENU_FILE_EXPORTTEXTURE_N_VECTORS);
-
+	
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("By X,Y,Z coordinates");
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("Cell Area (cm\262)", MENU_FILE_EXPORTTEXTURE_AREA_COORD);
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("# of MC Hits", MENU_FILE_EXPORTTEXTURE_MCHITS_COORD);
@@ -332,6 +334,8 @@ int MolFlow::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("Import desorption from SYN file",MENU_FILE_IMPORTDES_SYN);
 	//menu->GetSubMenu("File")->GetSubMenu("Import desorption file")->Add("SYN file", );
 	//menu->GetSubMenu("File")->GetSubMenu("Import desorption file")->Add("DES file (deprecated)", MENU_FILE_IMPORTDES_DES);
+	menu->GetSubMenu("File")->Add(NULL); // Separator
+	menu->GetSubMenu("File")->Add("Export Buffer", MENU_FILE_EXPORTBUFFER);
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT); //Moved here from OnetimeSceneinit_shared to assert it's the last menu item
@@ -1631,6 +1635,10 @@ void MolFlow::StartStopSimulation() {
 // Name: EventProc()
 // Desc: Message proc function to handle key and mouse input
 
+void MolFlow::ExportBufferToFile() {
+	worker.ExportBuffer();
+}
+
 void MolFlow::ProcessMessage(GLComponent *src, int message)
 {
 
@@ -1698,7 +1706,9 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		case MENU_FILE_EXPORTPROFILES:
 			ExportProfiles();
 			break;
-
+		case MENU_FILE_EXPORTBUFFER:
+			ExportBufferToFile();
+			break;
 		case MENU_TOOLS_MOVINGPARTS:
 			if (!movement) movement = new Movement(geom, &worker);
 			movement->Update();
