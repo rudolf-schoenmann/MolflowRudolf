@@ -1636,7 +1636,20 @@ void MolFlow::StartStopSimulation() {
 // Desc: Message proc function to handle key and mouse input
 
 void MolFlow::ExportBufferToFile() {
-	worker.ExportBuffer();
+	FILENAME *fn = GLFileBox::SaveFile(currentDir, NULL, "Save File", fileBufferFilters, 0);
+	if (fn) {
+		try {
+			//worker.ExportProfiles(fn->fullName);
+			worker.ExportBuffer(fn->fullName);
+		}
+		catch (Error &e) {
+			char errMsg[512];
+			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fn->fullName);
+			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+		}
+	}
+	
+	//worker.ExportBuffer();
 }
 
 void MolFlow::ProcessMessage(GLComponent *src, int message)

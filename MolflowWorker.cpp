@@ -1719,8 +1719,46 @@ void Worker::SendFacetHitCounts(Dataport* dpHit) {
 	}
 }
 
-void Worker::ExportBuffer()
-{ 
-	//dpHit->buff;
-	//mApp->Exit(); //just to test
+void Worker::ExportBuffer(char *fileName)
+{
+	char tmp[512];
+
+	// Read a file
+	//FILE *f = NULL;
+	std::ofstream f;
+
+	char *ext, *dir;
+
+	dir = strrchr(fileName, '\\');
+	ext = strrchr(fileName, '.');
+
+	ext++;
+	
+	bool ok = true;
+
+	if (FileUtils::Exist(fileName)) {
+		sprintf(tmp, "Overwrite existing file ?\n%s", fileName);
+		ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+	}
+
+	if (ok) {
+		f.open(fileName, ios::out);
+		//f = fopen(fileName, "w");
+		if (!f) {
+			char tmp[256];
+			sprintf(tmp, "Cannot open file for writing %s", fileName);
+			throw Error(tmp);
+		}
+		// Block dpHit during the whole disc writing
+		BYTE *buffer = NULL;
+		if (dpHit)
+			if (AccessDataport(dpHit))
+			buffer = (BYTE *)dpHit->buff;
+		if (dpHit != nullptr) {
+			f.write((const char *)buffer, dpHit->size);
+		}
+		f.close();
+		//fclose(f);
+		ReleaseDataport(dpHit);
+	}
 }
