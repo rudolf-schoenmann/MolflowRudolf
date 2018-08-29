@@ -1742,7 +1742,7 @@ void Worker::ExportBuffer(char *fileName)
 	}
 
 	if (ok) {
-		f.open(fileName, ios::out);
+		f.open(fileName, ios::binary);
 		//f = fopen(fileName, "w");
 		if (!f) {
 			char tmp[256];
