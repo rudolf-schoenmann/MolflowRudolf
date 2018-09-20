@@ -153,6 +153,7 @@ MolFlow *mApp;
 //#define MENU_FILE_EXPORTBUFFER 180
 #define MENU_FILE_EXPORTBUFFER_LOAD 181
 #define MENU_FILE_EXPORTBUFFER_HIT 182
+#define MENU_FILE_IMPORTBUFFER_HIT 183
 
 #define MENU_TOOLS_MOVINGPARTS 410
 
@@ -340,6 +341,8 @@ int MolFlow::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("Export buffer"); //, MENU_FILE_EXPORTBUFFER);
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export load buffer", MENU_FILE_EXPORTBUFFER_LOAD);
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
+	menu->GetSubMenu("File")->Add("Import buffer");
+	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("Import hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT); //Moved here from OnetimeSceneinit_shared to assert it's the last menu item
@@ -1683,6 +1686,34 @@ void MolFlow::ExportLoadBufferToFile() {
 
 }
 
+void MolFlow::ImportHitBuffer(char *fName) {
+
+	//hier muss noch Code von MolFlwo::LoadFile hin!
+
+
+	Geometry *geom = worker.GetGeometry();
+	if (geom->GetNbFacet() == 0) {
+		GLMessageBox::Display("No Geometry loaded. Please load corresponding file.", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		return;
+	}
+	if (!worker.IsDpInitialized()) {
+		GLMessageBox::Display("Worker Dataport not initialized yet", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		return;
+	}
+	FILENAME *fn = GLFileBox::SaveFile(currentDir, NULL, "Save File", fileBufferFilters, 0);
+	if (fn) {
+		try {
+			worker.ImportHitBuffer(fn->fullName);
+		}
+		catch (Error &e) {
+			char errMsg[512];
+			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fn->fullName);
+			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+			RemoveRecent(fName);
+		}
+	}
+
+}
 void MolFlow::ProcessMessage(GLComponent *src, int message)
 {
 
