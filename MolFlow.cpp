@@ -150,7 +150,9 @@ MolFlow *mApp;
 #define MENU_FILE_EXPORTTEXTURE_AVG_V_COORD  177
 #define MENU_FILE_EXPORTTEXTURE_V_VECTOR_COORD  178
 #define MENU_FILE_EXPORTTEXTURE_N_VECTORS_COORD  179
-#define MENU_FILE_EXPORTBUFFER 180
+//#define MENU_FILE_EXPORTBUFFER 180
+#define MENU_FILE_EXPORTBUFFER_LOAD 181
+#define MENU_FILE_EXPORTBUFFER_HIT 182
 
 #define MENU_TOOLS_MOVINGPARTS 410
 
@@ -335,7 +337,9 @@ int MolFlow::OneTimeSceneInit()
 	//menu->GetSubMenu("File")->GetSubMenu("Import desorption file")->Add("SYN file", );
 	//menu->GetSubMenu("File")->GetSubMenu("Import desorption file")->Add("DES file (deprecated)", MENU_FILE_IMPORTDES_DES);
 	menu->GetSubMenu("File")->Add(NULL); // Separator
-	menu->GetSubMenu("File")->Add("Export Buffer", MENU_FILE_EXPORTBUFFER);
+	menu->GetSubMenu("File")->Add("Export buffer"); //, MENU_FILE_EXPORTBUFFER);
+	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export load buffer", MENU_FILE_EXPORTBUFFER_LOAD);
+	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT); //Moved here from OnetimeSceneinit_shared to assert it's the last menu item
@@ -1635,12 +1639,20 @@ void MolFlow::StartStopSimulation() {
 // Name: EventProc()
 // Desc: Message proc function to handle key and mouse input
 
-void MolFlow::ExportBufferToFile() {
+void MolFlow::ExportHitBufferToFile() {
+	Geometry *geom = worker.GetGeometry();
+	if (geom->GetNbFacet() == 0) {
+		GLMessageBox::Display("Empty selection", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		return;
+	}
+	if (!worker.IsDpInitialized()) {
+		GLMessageBox::Display("Worker Dataport not initialized yet", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		return;
+	}
 	FILENAME *fn = GLFileBox::SaveFile(currentDir, NULL, "Save File", fileBufferFilters, 0);
 	if (fn) {
 		try {
-			//worker.ExportProfiles(fn->fullName);
-			worker.ExportBuffer(fn->fullName);
+			worker.ExportHitBuffer(fn->fullName);
 		}
 		catch (Error &e) {
 			char errMsg[512];
@@ -1649,7 +1661,26 @@ void MolFlow::ExportBufferToFile() {
 		}
 	}
 	
-	//worker.ExportBuffer();
+}
+
+void MolFlow::ExportLoadBufferToFile() {
+	Geometry *geom = worker.GetGeometry();
+	if (geom->GetNbFacet() == 0) {
+		GLMessageBox::Display("Empty selection", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		return;
+	}
+	FILENAME *fn = GLFileBox::SaveFile(currentDir, NULL, "Save File", fileBufferFilters, 0);
+	if (fn) {
+		try {
+			worker.ExportLoadBuffer(fn->fullName);
+		}
+		catch (Error &e) {
+			char errMsg[512];
+			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fn->fullName);
+			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+		}
+	}
+
 }
 
 void MolFlow::ProcessMessage(GLComponent *src, int message)
@@ -1719,8 +1750,11 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		case MENU_FILE_EXPORTPROFILES:
 			ExportProfiles();
 			break;
-		case MENU_FILE_EXPORTBUFFER:
-			ExportBufferToFile();
+		case MENU_FILE_EXPORTBUFFER_LOAD:
+			ExportLoadBufferToFile();
+			break;
+		case MENU_FILE_EXPORTBUFFER_HIT:
+			ExportHitBufferToFile();
 			break;
 		case MENU_TOOLS_MOVINGPARTS:
 			if (!movement) movement = new Movement(geom, &worker);

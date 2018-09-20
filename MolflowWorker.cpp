@@ -116,6 +116,7 @@ Worker::Worker() {
 	dpControl = NULL;
 	dpHit = NULL;
 	dpLog = NULL;
+	//loader = NULL;
 
 	startTime = 0.0f;
 	stopTime = 0.0f;
@@ -1719,7 +1720,7 @@ void Worker::SendFacetHitCounts(Dataport* dpHit) {
 	}
 }
 
-void Worker::ExportBuffer(char *fileName)
+void Worker::ExportHitBuffer(char *fileName)
 {
 	char tmp[512];
 
@@ -1761,4 +1762,46 @@ void Worker::ExportBuffer(char *fileName)
 		//fclose(f);
 		ReleaseDataport(dpHit);
 	}
+}
+
+void Worker::ExportLoadBuffer(char *fileName)
+{
+	char tmp[512];
+
+	// Read a file
+	//FILE *f = NULL;
+	std::ofstream f;
+
+	char *ext, *dir;
+
+	dir = strrchr(fileName, '\\');
+	ext = strrchr(fileName, '.');
+
+	ext++;
+
+	bool ok = true;
+
+	if (FileUtils::Exist(fileName)) {
+		sprintf(tmp, "Overwrite existing file ?\n%s", fileName);
+		ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+	}
+
+	if (ok) {
+		f.open(fileName, ios::binary);
+		if (!f) {
+			char tmp[256];
+			sprintf(tmp, "Cannot open file for writing %s", fileName);
+			throw Error(tmp);
+		}
+
+		std::string loaderString = SerializeForLoader().str();
+		size_t loadSize = loaderString.size();
+		BYTE* buffer = new BYTE[loadSize];
+		std::copy(loaderString.begin(), loaderString.end(), buffer); 
+		if (buffer != nullptr) {
+			f.write((const char *)buffer, loadSize);
+		}
+		delete buffer;
+		f.close();
+		}
 }

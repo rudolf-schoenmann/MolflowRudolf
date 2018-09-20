@@ -144,8 +144,9 @@ public:
     void BuildPipe(double ratio,int steps=0);
 	void EmptyGeometry();
 	void CrashHandler(Error *e);
-	void ExportBufferToFile(); //new function to export Buffer for Simulation on Linux HPC, added by Rudi.
-	
+	void ExportHitBufferToFile(); //new function to export hit buffer for simulation on Linux HPC, added by Rudi.
+	void ExportLoadBufferToFile(); //new function to export load buffer for simulation on Linux HPC, added by Rudi.
+
 protected:
 	void LoadParameterCatalog();
     int  OneTimeSceneInit();
