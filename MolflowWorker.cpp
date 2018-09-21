@@ -1808,6 +1808,32 @@ void Worker::ExportLoadBuffer(char *fileName)
 
 void Worker::ImportHitBuffer(char *fileName)
 {
+	char CWD[MAX_PATH];
+	_getcwd(CWD, MAX_PATH);
+
+	std::string ext = FileUtils::GetExtension(fileName);
+
+	if (ext != "")
+
+		throw Error("ImportHitBuffer(): Wrong file extension.");
+
+	// Read a file
+
+	FileReader *f = NULL;
+	GLProgress *progressDlg = new GLProgress("Reading file...", "Please wait");
+	progressDlg->SetVisible(true);
+	progressDlg->SetProgress(0.0);
+
+
+	//hier muss das File eingelesen werden
+
+
+
+	progressDlg->SetVisible(false);
+	SAFE_DELETE(progressDlg);
+
+	//
+	/*
 	char tmp[512];
 
 	// Read a file
@@ -1848,4 +1874,5 @@ void Worker::ImportHitBuffer(char *fileName)
 		//fclose(f);
 		ReleaseDataport(dpHit);
 	}
+	*/
 }

@@ -153,7 +153,7 @@ MolFlow *mApp;
 //#define MENU_FILE_EXPORTBUFFER 180
 #define MENU_FILE_EXPORTBUFFER_LOAD 181
 #define MENU_FILE_EXPORTBUFFER_HIT 182
-#define MENU_FILE_IMPORTBUFFER_HIT 183
+//#define MENU_FILE_IMPORTBUFFER_HIT 183
 
 #define MENU_TOOLS_MOVINGPARTS 410
 
@@ -341,8 +341,8 @@ int MolFlow::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("Export buffer"); //, MENU_FILE_EXPORTBUFFER);
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export load buffer", MENU_FILE_EXPORTBUFFER_LOAD);
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
-	menu->GetSubMenu("File")->Add("Import buffer");
-	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("Import hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
+	/*menu->GetSubMenu("File")->Add("Import buffer");
+	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("Import hit buffer", MENU_FILE_IMPORTBUFFER_HIT); moved to Interface*/
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT); //Moved here from OnetimeSceneinit_shared to assert it's the last menu item
@@ -1687,10 +1687,6 @@ void MolFlow::ExportLoadBufferToFile() {
 }
 
 void MolFlow::ImportHitBuffer(char *fName) {
-
-	//hier muss noch Code von MolFlwo::LoadFile hin!
-
-
 	Geometry *geom = worker.GetGeometry();
 	if (geom->GetNbFacet() == 0) {
 		GLMessageBox::Display("No Geometry loaded. Please load corresponding file.", "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -1700,20 +1696,63 @@ void MolFlow::ImportHitBuffer(char *fName) {
 		GLMessageBox::Display("Worker Dataport not initialized yet", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
-	FILENAME *fn = GLFileBox::SaveFile(currentDir, NULL, "Save File", fileBufferFilters, 0);
-	if (fn) {
-		try {
-			worker.ImportHitBuffer(fn->fullName);
-		}
-		catch (Error &e) {
-			char errMsg[512];
-			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fn->fullName);
-			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-			RemoveRecent(fName);
-		}
+
+	char fullName[512];
+	char shortName[512];
+	strcpy(fullName, "");
+
+	if (fName == NULL) {
+		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open file", fileLFilters, 0);
+		if (fn)
+			strcpy(fullName, fn->fullName);
+	}
+	else {
+		strcpy(fullName, fName);
 	}
 
+	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
+	progressDlg2->SetVisible(true);
+	progressDlg2->SetProgress(0.0);
+	//GLWindowManager::Repaint();
+
+	if (strlen(fullName) == 0) {
+		progressDlg2->SetVisible(false);
+		SAFE_DELETE(progressDlg2);
+		return;
+	}
+
+	char *lPart = strrchr(fullName, '\\');
+	if (lPart) strcpy(shortName, lPart + 1);
+	else strcpy(shortName, fullName);
+
+	try {
+		worker.ImportHitBuffer(fullName);
+
+		/* (Rudi) Do we need that later?
+		if (timeSettings) timeSettings->RefreshMoments();
+		if (momentsEditor) momentsEditor->Refresh();
+		if (pressureEvolution) pressureEvolution->Reset();
+		if (timewisePlotter) timewisePlotter->Refresh();
+		if (histogramPlotter) histogramPlotter->Reset();
+		if (histogramSettings) histogramSettings->Refresh({});
+		//if (profilePlotter) profilePlotter->Refresh(); //Might have loaded views
+		if (texturePlotter) texturePlotter->Update(0.0, true);
+		//if (parameterEditor) parameterEditor->UpdateCombo(); //Done by ClearParameters()
+		if (textureScaling) textureScaling->Update();
+		if (outgassingMap) outgassingMap->Update(m_fTime, true);
+		if (globalSettings && globalSettings->IsVisible()) globalSettings->Update();
+		if (formulaEditor) formulaEditor->Refresh();
+		*/
+	}
+	catch (Error &e) {
+
+		char errMsg[512];
+		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
+		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+		RemoveRecent(fName);
+	}
 }
+
 void MolFlow::ProcessMessage(GLComponent *src, int message)
 {
 
@@ -1786,6 +1825,9 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			break;
 		case MENU_FILE_EXPORTBUFFER_HIT:
 			ExportHitBufferToFile();
+			break;
+		case MENU_FILE_IMPORTBUFFER_HIT:
+			//ImportHitBuffer(char *fName);
 			break;
 		case MENU_TOOLS_MOVINGPARTS:
 			if (!movement) movement = new Movement(geom, &worker);
