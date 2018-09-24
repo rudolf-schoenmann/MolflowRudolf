@@ -341,8 +341,8 @@ int MolFlow::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("Export buffer"); //, MENU_FILE_EXPORTBUFFER);
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export load buffer", MENU_FILE_EXPORTBUFFER_LOAD);
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
-	/*menu->GetSubMenu("File")->Add("Import buffer");
-	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("Import hit buffer", MENU_FILE_IMPORTBUFFER_HIT); moved to Interface*/
+	menu->GetSubMenu("File")->Add("&Import buffer");
+	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("&Import hit buffer", MENU_FILE_IMPORTBUFFER_HIT);
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT); //Moved here from OnetimeSceneinit_shared to assert it's the last menu item
