@@ -1710,14 +1710,14 @@ void MolFlow::ImportHitBuffer(char *fName) {
 		strcpy(fullName, fName);
 	}
 
-	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
+	/*GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
 	progressDlg2->SetVisible(true);
-	progressDlg2->SetProgress(0.0);
+	progressDlg2->SetProgress(0.0);*/
 	//GLWindowManager::Repaint();
 
 	if (strlen(fullName) == 0) {
-		progressDlg2->SetVisible(false);
-		SAFE_DELETE(progressDlg2);
+		/*progressDlg2->SetVisible(false);
+		SAFE_DELETE(progressDlg2);*/
 		return;
 	}
 
@@ -1728,7 +1728,8 @@ void MolFlow::ImportHitBuffer(char *fName) {
 	try {
 		worker.ImportHitBuffer(fullName);
 
-		/* (Rudi) Do we need that later?
+		//(Rudi) Do we need that later?
+		/*
 		if (timeSettings) timeSettings->RefreshMoments();
 		if (momentsEditor) momentsEditor->Refresh();
 		if (pressureEvolution) pressureEvolution->Reset();

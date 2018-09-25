@@ -1817,62 +1817,42 @@ void Worker::ImportHitBuffer(char *fileName)
 
 		throw Error("ImportHitBuffer(): Wrong file extension.");
 
-	// Read a file
-
-	FileReader *f = NULL;
-	GLProgress *progressDlg = new GLProgress("Reading file...", "Please wait");
+	/*GLProgress *progressDlg = new GLProgress("Reading file...", "Please wait");
 	progressDlg->SetVisible(true);
-	progressDlg->SetProgress(0.0);
-
-
-	//hier muss das File eingelesen werden
-
-
-
-	progressDlg->SetVisible(false);
-	SAFE_DELETE(progressDlg);
-
-	//
-	/*
-	char tmp[512];
+	progressDlg->SetProgress(0.0);*/
 
 	// Read a file
-	//FILE *f = NULL;
-	std::ofstream f;
+	//FileReader *f = NULL;
+	std::ifstream f (fileName, std::ifstream::binary);
+	if (f) {
+		// get length of file:
+		f.seekg(0, f.end);
+		int length = f.tellg();
+		f.seekg(0, f.beg);
 
-	char *ext, *dir;
+		char *charbuffer = new char[length];
+		f.read(charbuffer, length);
 
-	dir = strrchr(fileName, '\\');
-	ext = strrchr(fileName, '.');
-
-	ext++;
-
-	bool ok = true;
-
-	if (FileUtils::Exist(fileName)) {
-		sprintf(tmp, "Overwrite existing file ?\n%s", fileName);
-		ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
-	}
-
-	if (ok) {
-		f.open(fileName, ios::binary);
-		//f = fopen(fileName, "w");
-		if (!f) {
-			char tmp[256];
-			sprintf(tmp, "Cannot open file for writing %s", fileName);
-			throw Error(tmp);
-		}
-		// Block dpHit during the whole disc writing
+		// Block dpHit
 		BYTE *buffer = NULL;
 		if (dpHit)
-			if (AccessDataport(dpHit))
+			if (AccessDataport(dpHit)) {
+				if (length != dpHit->size) {
+					GLMessageBox::Display("Wrong Geometry loaded? Hit buffer size of geometry does not match the buffer size of the file to be imported.", "Error", GLDLG_OK, GLDLG_ICONERROR);
+					delete[] charbuffer;
+					return;
+				}
 				buffer = (BYTE *)dpHit->buff;
-		if (dpHit != nullptr) {
-			f.write((const char *)buffer, dpHit->size);
-		}
-		f.close();
-		//fclose(f);
-		ReleaseDataport(dpHit);
+				std::copy(charbuffer, charbuffer+length, buffer); 
+			}
+			ReleaseDataport(dpHit);
+    delete[] charbuffer;
+	//SendToHitBuffer(); //Send hits without sending facet counters, as they are directly written during the load process (mutiple moments)
+	RebuildTextures();
 	}
-	*/
+	
+	/*progressDlg->SetVisible(false);
+	SAFE_DELETE(progressDlg);*/
+
+	
 }
