@@ -1696,7 +1696,7 @@ void MolFlow::ImportHitBuffer(char *fName) {
 		GLMessageBox::Display("Worker Dataport not initialized yet", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
-
+	GLMessageBox::Display("Please choose 'All files' when selecting the import buffer in the next dialog. Buffer files do not have a file ending. They are not included in 'All Molflow supported files'.", "Info", GLDLG_OK, GLDLG_ICONINFO);
 	char fullName[512];
 	char shortName[512];
 	strcpy(fullName, "");

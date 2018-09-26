@@ -1848,7 +1848,8 @@ void Worker::ImportHitBuffer(char *fileName)
 			ReleaseDataport(dpHit);
     delete[] charbuffer;
 	//SendToHitBuffer(); //Send hits without sending facet counters, as they are directly written during the load process (mutiple moments)
-	RebuildTextures();
+	//RebuildTextures();
+	Update(mApp->m_fTime);
 	}
 	
 	/*progressDlg->SetVisible(false);
