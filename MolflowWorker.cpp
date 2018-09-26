@@ -1724,8 +1724,6 @@ void Worker::ExportHitBuffer(char *fileName)
 {
 	char tmp[512];
 
-	// Read a file
-	//FILE *f = NULL;
 	std::ofstream f;
 
 	char *ext, *dir;
@@ -1744,7 +1742,6 @@ void Worker::ExportHitBuffer(char *fileName)
 
 	if (ok) {
 		f.open(fileName, ios::binary);
-		//f = fopen(fileName, "w");
 		if (!f) {
 			char tmp[256];
 			sprintf(tmp, "Cannot open file for writing %s", fileName);
@@ -1759,7 +1756,6 @@ void Worker::ExportHitBuffer(char *fileName)
 			f.write((const char *)buffer, dpHit->size);
 		}
 		f.close();
-		//fclose(f);
 		ReleaseDataport(dpHit);
 	}
 }
@@ -1768,10 +1764,7 @@ void Worker::ExportLoadBuffer(char *fileName)
 {
 	char tmp[512];
 
-	// Read a file
-	//FILE *f = NULL;
 	std::ofstream f;
-
 	char *ext, *dir;
 
 	dir = strrchr(fileName, '\\');
@@ -1810,29 +1803,17 @@ void Worker::ImportHitBuffer(char *fileName)
 {
 	char CWD[MAX_PATH];
 	_getcwd(CWD, MAX_PATH);
-
 	std::string ext = FileUtils::GetExtension(fileName);
-
 	if (ext != "")
-
 		throw Error("ImportHitBuffer(): Wrong file extension.");
-
-	/*GLProgress *progressDlg = new GLProgress("Reading file...", "Please wait");
-	progressDlg->SetVisible(true);
-	progressDlg->SetProgress(0.0);*/
-
-	// Read a file
-	//FileReader *f = NULL;
 	std::ifstream f (fileName, std::ifstream::binary);
 	if (f) {
 		// get length of file:
 		f.seekg(0, f.end);
 		int length = f.tellg();
 		f.seekg(0, f.beg);
-
 		char *charbuffer = new char[length];
 		f.read(charbuffer, length);
-
 		// Block dpHit
 		BYTE *buffer = NULL;
 		if (dpHit)
@@ -1847,13 +1828,6 @@ void Worker::ImportHitBuffer(char *fileName)
 			}
 			ReleaseDataport(dpHit);
     delete[] charbuffer;
-	//SendToHitBuffer(); //Send hits without sending facet counters, as they are directly written during the load process (mutiple moments)
-	//RebuildTextures();
 	Update(mApp->m_fTime);
 	}
-	
-	/*progressDlg->SetVisible(false);
-	SAFE_DELETE(progressDlg);*/
-
-	
 }

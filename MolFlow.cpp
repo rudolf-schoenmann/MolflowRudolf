@@ -1709,44 +1709,16 @@ void MolFlow::ImportHitBuffer(char *fName) {
 	else {
 		strcpy(fullName, fName);
 	}
-
-	/*GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
-	progressDlg2->SetVisible(true);
-	progressDlg2->SetProgress(0.0);*/
-	//GLWindowManager::Repaint();
-
 	if (strlen(fullName) == 0) {
-		/*progressDlg2->SetVisible(false);
-		SAFE_DELETE(progressDlg2);*/
 		return;
 	}
-
 	char *lPart = strrchr(fullName, '\\');
 	if (lPart) strcpy(shortName, lPart + 1);
 	else strcpy(shortName, fullName);
-
 	try {
 		worker.ImportHitBuffer(fullName);
-
-		//(Rudi) Do we need that later?
-		/*
-		if (timeSettings) timeSettings->RefreshMoments();
-		if (momentsEditor) momentsEditor->Refresh();
-		if (pressureEvolution) pressureEvolution->Reset();
-		if (timewisePlotter) timewisePlotter->Refresh();
-		if (histogramPlotter) histogramPlotter->Reset();
-		if (histogramSettings) histogramSettings->Refresh({});
-		//if (profilePlotter) profilePlotter->Refresh(); //Might have loaded views
-		if (texturePlotter) texturePlotter->Update(0.0, true);
-		//if (parameterEditor) parameterEditor->UpdateCombo(); //Done by ClearParameters()
-		if (textureScaling) textureScaling->Update();
-		if (outgassingMap) outgassingMap->Update(m_fTime, true);
-		if (globalSettings && globalSettings->IsVisible()) globalSettings->Update();
-		if (formulaEditor) formulaEditor->Refresh();
-		*/
 	}
 	catch (Error &e) {
-
 		char errMsg[512];
 		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
