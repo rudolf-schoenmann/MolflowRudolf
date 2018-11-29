@@ -46,6 +46,17 @@ extern MolFlow *mApp;
 extern SynRad*mApp;
 #endif
 
+
+double updatecovering(Facet *iFacet, Worker *worker)
+{
+	//TODO: adapt units, this may not yet be the correct result
+	double N_mono = iFacet->sh.area / Sqr(76 * pow(10.0, -12.0));
+	double dN_surf = worker->wp.gasMass / 12.011;
+
+	return dN_surf / N_mono;
+
+}
+
 MolflowGeometry::MolflowGeometry() {
 
 	texAutoScaleIncludeConstantFlow = true;
@@ -3154,6 +3165,8 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 					//Backward compatibility
 					facetCounter->hit.sum_1_per_velocity = 4.0 * Sqr(facetCounter->hit.nbHitEquiv + static_cast<double>(facetCounter->hit.nbDesorbed))/ facetCounter->hit.sum_1_per_ort_velocity;
 				}
+				
+				facetCounter->hit.covering = updatecovering(f,work)*facetCounter->hit.nbAbsEquiv;
 
 				if (work->displayedMoment == m) { //For immediate display in facet hits list and facet counter
 					f->facetHitCache.hit = facetCounter->hit;
@@ -3168,6 +3181,7 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 				facetCounter->hit.sum_1_per_ort_velocity =
 				facetCounter->hit.sum_1_per_velocity =
 				facetCounter->hit.nbAbsEquiv =
+				facetCounter->hit.covering=
 				0.0;
 			}
 

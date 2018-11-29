@@ -48,6 +48,65 @@ void CalcTotalOutgassing() {
 
 }
 
+
+double calcNmono(SubprocessFacet *iFacet)
+{
+	return iFacet->sh.area / Sqr(76E-12);
+}
+
+double calcdNsurf() {
+	return sHandle->wp.gasMass / 12.011;
+}
+
+double calcKrealvirt(int m) { //TODO not sure yet
+	double timeCorrection = m == 0 ? sHandle->wp.finalOutgassingRate : (sHandle->wp.totalDesorbedMolecules) / sHandle->wp.timeWindowSize;
+	return timeCorrection;
+}
+
+double calcRealCovering(SubprocessFacet *iFacet) { //TODO not sure yet
+	double covering = 0.0;
+
+	size_t nbMoments = sHandle->moments.size();
+	for (size_t m = 0; m <= nbMoments; m++) {
+		covering += (double)iFacet->tmpCounter[m].hit.covering*calcKrealvirt(m);
+
+	}
+	return covering;
+}
+
+// calculations for simulation
+double calcCoveringUpdate(SubprocessFacet *iFacet)
+{
+	//TODO: adapt units, this may not yet be the correct result
+	double N_mono = calcNmono(iFacet);
+	double dN_surf = calcdNsurf();
+
+	return dN_surf / N_mono;
+
+}
+
+double calcDesorption(SubprocessFacet *iFacet) {
+	double tau = 1;
+	double d = 1;
+	double E_de = 2.5E-21;
+	double kb = 1.38E-23;
+
+	double temperature;
+	double covering = calcRealCovering(iFacet);
+
+	double desorption = 0.0;
+
+	if (covering>0) {
+		temperature = iFacet->sh.temperature;
+		double N_mono = calcNmono(iFacet);
+		double dN_surf = calcdNsurf();
+
+		desorption = 1 / tau * pow(covering, d) *exp(-E_de / (kb*temperature)) * N_mono / dN_surf;
+	}
+
+	return desorption;
+}
+
 //void PolarToCartesian(SubprocessFacet *iFacet, double theta, double phi, bool reverse) {
 //
 //	Vector3d U, V, N;
@@ -216,6 +275,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, size_t nbMoments, DWORD timeout) {
 					facetHitBuffer->hit.sum_1_per_ort_velocity += f.tmpCounter[m].hit.sum_1_per_ort_velocity;
 					facetHitBuffer->hit.sum_v_ort += f.tmpCounter[m].hit.sum_v_ort;
 					facetHitBuffer->hit.sum_1_per_velocity += f.tmpCounter[m].hit.sum_1_per_velocity;
+					facetHitBuffer->hit.covering += f.tmpCounter[m].hit.covering;
 				}
 
 				if (f.sh.isProfile) {
@@ -1490,6 +1550,12 @@ void IncreaseFacetCounter(SubprocessFacet *f, double time, size_t hit, size_t de
 			f->tmpCounter[m].hit.sum_1_per_ort_velocity += sHandle->currentParticle.oriRatio * sum_1_per_v;
 			f->tmpCounter[m].hit.sum_v_ort += sHandle->currentParticle.oriRatio * sum_v_ort;
 			f->tmpCounter[m].hit.sum_1_per_velocity += (hitEquiv + static_cast<double>(desorb)) / sHandle->currentParticle.velocity;
+			if(absorb>0)
+				f->tmpCounter[m].hit.covering += calcCoveringUpdate(f);
+			if (desorb > 0)
+				f->tmpCounter[m].hit.covering -= calcCoveringUpdate(f);
+
+			f->tmpCounter[m].hit.covering = f->tmpCounter[m].hit.covering < 0.0 ? 0 : f->tmpCounter[m].hit.covering;
 		}
 	}
 }

@@ -79,6 +79,7 @@ public:
 	//Flow/sticking coeff. conversion
 	void calcFlow();
 	void calcSticking();
+	void calcStickingnew();
 
 	bool EvaluateVariable(VLIST *v);
 
@@ -100,6 +101,9 @@ public:
 	GLLabel       *facetPumpingLabel;
 	GLTextField   *facetPumping;	
     GLLabel       *facetSLabel;
+
+	GLLabel       *facetcoveringLabel;
+	GLTextField   *facetcovering;
 	
     
 	GLLabel       *facetTempLabel;
