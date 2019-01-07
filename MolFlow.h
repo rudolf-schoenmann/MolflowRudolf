@@ -31,6 +31,7 @@ class FacetDetails;
 class Viewer3DSettings;
 class TextureScaling;
 class GlobalSettings;
+class HistoryWin;
 class ProfilePlotter;
 class PressureEvolution;
 class TimewisePlotter;
@@ -120,6 +121,7 @@ public:
 	GLButton      *texturePlotterBtn;
 	GLButton      *textureScalingBtn;
 	GLButton      *globalSettingsBtn;
+	GLButton      *historyBtn;
 
 	GLTitledPanel *inputPanel;
 	GLTitledPanel *outputPanel;
@@ -133,6 +135,7 @@ public:
     Viewer3DSettings *viewer3DSettings;
     TextureScaling  *textureScaling;
 	GlobalSettings	 *globalSettings;
+	HistoryWin		*history;
     ProfilePlotter   *profilePlotter;
 	PressureEvolution *pressureEvolution;
 	TimewisePlotter  *timewisePlotter;

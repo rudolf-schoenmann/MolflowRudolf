@@ -53,6 +53,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "Viewer3DSettings.h"
 #include "TextureScaling.h"
 #include "GlobalSettings.h"
+#include "HistoryWin.h"
 #include "ProfilePlotter.h"
 #include "PressureEvolution.h"
 #include "TimewisePlotter.h"
@@ -213,6 +214,7 @@ MolFlow::MolFlow()
 	textureScaling = NULL;
 	formulaEditor = NULL;
 	globalSettings = NULL;
+	history = NULL;
 	profilePlotter = NULL;
 	texturePlotter = NULL;
 
@@ -500,6 +502,23 @@ int MolFlow::OneTimeSceneInit()
 	facetList->Sortable = true;
 	Add(facetList);
 
+	historyBtn = new GLButton(0, "<< history");
+	//historyBtn->SetVisible(false);
+	simuPanel->Add(historyBtn);
+	/*
+	historyList = new GLList(0);
+	historyList->SetWorker(&worker);
+	historyList->SetGrid(true);
+	historyList->SetSelectionMode(MULTIPLE_ROW);
+	historyList->SetSize(1, 0);
+	historyList->AutoSizeColumn();
+	historyList->SetColumnLabels();
+	historyList->SetColumnLabelVisible(true);
+	historyList->Sortable = true;
+	Add(historyList);*/
+
+
+
 	facetAdvParams = new FacetAdvParams(&worker); //To use its UpdatefacetParams() routines
 
 	LoadParameterCatalog();
@@ -602,7 +621,7 @@ void MolFlow::PlaceComponents() {
 	sy += shortcutPanel->GetHeight() + 5;
 
 	// Simulation ---------------------------------------------
-	simuPanel->SetBounds(sx, sy, 202, 169);
+	simuPanel->SetBounds(sx, sy, 202, 169+50);
 
 	simuPanel->SetCompBounds(globalSettingsBtn, 5, 20, 48, 19);
 	simuPanel->SetCompBounds(startSimu, 58, 20, 66, 19);
@@ -626,12 +645,17 @@ void MolFlow::PlaceComponents() {
 
 	simuPanel->SetCompBounds(sTime, 40, 145, 155, 18);
 
+	simuPanel->SetCompBounds(historyBtn, 5, 145+50, 50, 18);
+
+	
 	sy += (simuPanel->GetHeight() + 5);
 
 	
 	int lg = m_screenHeight -23 /*- (nbFormula * 25)*/;
 
-	facetList->SetBounds(sx, sy, 202, lg - sy);
+	facetList->SetBounds(sx, sy, 202, (lg - sy));
+	sy += (facetList->GetHeight() + 5);
+	//historyList->SetBounds(sx, sy, 202, (lg - sy));
 
 	/*
 	for (int i = 0; i < nbFormula; i++) {
@@ -1486,8 +1510,8 @@ void MolFlow::LoadFile(char *fName) {
 		ClearAllSelections();
 		ClearAllViews();
 		ResetSimulation(false);
-
 		worker.LoadGeometry(fullName);
+		
 
 		Geometry *geom = worker.GetGeometry();
 
@@ -2158,6 +2182,9 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			changedSinceSave = true;
 			StartStopSimulation();
 			resetSimu->SetEnabled(!worker.isRunning);
+			if (!worker.isRunning) {
+				history->UpdateList();
+			}
 		}
 
 		else if (src == facetApplyBtn) {
@@ -2206,6 +2233,15 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			}
 			else globalSettings->SetVisible(false);
 		}
+
+		else if (src == historyBtn) {
+			if (!history) history = new HistoryWin(&worker);
+			if (!history->IsVisible()) {
+				history->SetVisible(true);
+			}
+			else history->SetVisible(false);
+		}
+
 		else if (src == facetAdvParamsBtn) {
 			if (!facetAdvParams) {
 				facetAdvParams = new FacetAdvParams(&worker);
