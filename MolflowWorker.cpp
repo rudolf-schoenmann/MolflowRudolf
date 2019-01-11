@@ -1119,6 +1119,27 @@ void Worker::RealReload() { //Sharing geometry with workers
 		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'hits' dataport: out of memory.");
 	}
+	BYTE *hitbuffer = NULL;
+	if (dpHit) {
+		if (AccessDataport(dpHit))
+			hitbuffer = (BYTE *)dpHit->buff;
+		else {
+			CLOSEDP(loader);
+			progressDlg->SetVisible(false);
+			SAFE_DELETE(progressDlg);
+			throw Error("Failed to create 'hits' dataport: out of memory.");
+		}
+		size_t nbFacet = geom->GetNbFacet();
+		for (int i = 0; i < nbFacet; i++) {
+			Facet *f = geom->GetFacet(i);
+			double covering;
+			covering = f->facetHitCache.hit.covering;
+			FacetHitBuffer *facetHitBuffer = (FacetHitBuffer *)(hitbuffer + f->sh.hitOffset);
+			facetHitBuffer->hit.covering = covering;
+		}
+	}
+	ReleaseDataport(dpHit);
+	
 
 	/*
 	// Compute number of max desorption per process
