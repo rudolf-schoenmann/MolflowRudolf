@@ -1831,19 +1831,3 @@ void Worker::ImportHitBuffer(char *fileName)
 	Update(mApp->m_fTime);
 	}
 }
-
-void Worker::UpdateCoveringInHitBuffer(double covering) {
-	// Block dpHit during update of covering
-	BYTE *buffer = NULL;
-	if (dpHit) {
-		if (AccessDataport(dpHit))
-			buffer = (BYTE *)dpHit->buff;
-		//FacetHitBuffer *facetHitBuffer = (FacetHitBuffer *)(buffer + f.sh.hitoffset);
-		//buffer->hit.covering = covering;
-	}
-
-	ReleaseDataport(dpHit);
-
-
-
-}

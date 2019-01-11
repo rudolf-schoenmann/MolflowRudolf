@@ -3139,6 +3139,7 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 			Facet* f = GetFacet(facetId);
 			xml_node facetHitNode = newFacetResult.child("Hits");
 			FacetHitBuffer* facetCounter = (FacetHitBuffer *)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
 			if (facetHitNode) { //If there are hit results for the current moment	
 				facetCounter->hit.nbMCHit = facetHitNode.attribute("nbHit").as_llong();
 				if (facetHitNode.attribute("nbHitEquiv")) {
