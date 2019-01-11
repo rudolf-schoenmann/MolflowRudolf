@@ -731,7 +731,7 @@ void MolFlow::ApplyFacetParams() {
 		}
 	}
 
-	// Sticking
+	// Covering
 	double covering;
 	bool coveringNotNumber;
 	bool docovering = false;
@@ -2097,7 +2097,7 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetcovering) {
 			calcStickingnew();
 			facetApplyBtn->SetEnabled(true);
-		}
+			}
 		break;
 
 	case MSG_TEXT:
@@ -2120,6 +2120,9 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			ApplyFacetParams();
 		}
 		else if (src == facetFlowArea) {
+			ApplyFacetParams();
+		}
+		else if (src == facetcovering) {
 			ApplyFacetParams();
 		}
 		break;
