@@ -1119,6 +1119,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'hits' dataport: out of memory.");
 	}
+
 	BYTE *hitbuffer = NULL;
 	if (dpHit) {
 		if (AccessDataport(dpHit))
@@ -1139,7 +1140,6 @@ void Worker::RealReload() { //Sharing geometry with workers
 		}
 	}
 	ReleaseDataport(dpHit);
-	
 
 	/*
 	// Compute number of max desorption per process

@@ -2183,11 +2183,12 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		//BUTTON ------------------------------------------------------------------
 	case MSG_BUTTON:
 		if (src == startSimu) {
+			if(!history) history = new HistoryWin(&worker);
 			changedSinceSave = true;
 			StartStopSimulation();
 			resetSimu->SetEnabled(!worker.isRunning);
 			if (!worker.isRunning) {
-				history->UpdateList();
+					history->UpdateList();
 			}
 		}
 

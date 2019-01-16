@@ -51,7 +51,7 @@ void CalcTotalOutgassing() {
 
 double calcNmono(SubprocessFacet *iFacet)
 {
-	return iFacet->sh.area / Sqr(76E-12);
+	return iFacet->sh.area / (pow(76E-12, 2));
 }
 
 double calcdNsurf() {

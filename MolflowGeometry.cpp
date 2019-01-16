@@ -50,7 +50,7 @@ extern SynRad*mApp;
 double updatecovering(Facet *iFacet, Worker *worker)
 {
 	//TODO: adapt units, this may not yet be the correct result
-	double N_mono = iFacet->sh.area / Sqr(76 * pow(10.0, -12.0));
+	double N_mono = iFacet->sh.area / (pow(76E-12, 2));
 	double dN_surf = worker->wp.gasMass / 12.011;
 
 	return dN_surf / N_mono;
@@ -2575,6 +2575,7 @@ bool MolflowGeometry::SaveXML_simustate(xml_node saveDoc, Worker *work, BYTE *bu
 			facetHitNode.append_attribute("sum_v_ort") = facetCounter->hit.sum_v_ort;
 			facetHitNode.append_attribute("sum_1_per_v") = facetCounter->hit.sum_1_per_ort_velocity;
 			facetHitNode.append_attribute("sum_v") = facetCounter->hit.sum_1_per_velocity;
+			facetHitNode.append_attribute("covering") = facetCounter->hit.covering;
 
 			if (f->sh.isProfile){
 				xml_node profileNode = newFacetResult.append_child("Profile");
@@ -3166,8 +3167,12 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 					//Backward compatibility
 					facetCounter->hit.sum_1_per_velocity = 4.0 * Sqr(facetCounter->hit.nbHitEquiv + static_cast<double>(facetCounter->hit.nbDesorbed))/ facetCounter->hit.sum_1_per_ort_velocity;
 				}
-				
-				facetCounter->hit.covering = updatecovering(f,work)*facetCounter->hit.nbAbsEquiv;
+				if (facetHitNode.attribute("covering")) {
+					facetCounter->hit.covering = facetHitNode.attribute("covering").as_double();
+				}
+				else {
+					facetCounter->hit.covering = facetCounter->hit.nbAbsEquiv*updatecovering(f, work);
+				}
 
 				if (work->displayedMoment == m) { //For immediate display in facet hits list and facet counter
 					f->facetHitCache.hit = facetCounter->hit;
