@@ -465,7 +465,7 @@ int MolFlow::OneTimeSceneInit()
 	facetPumping = new GLTextField(0, NULL);
 	outputPanel->Add(facetPumping);
 	
-	facetcoveringLabel = new GLLabel("Covering (unit):");
+	facetcoveringLabel = new GLLabel("Covering:");
 	outputPanel->Add(facetcoveringLabel);
 	facetcovering = new GLTextField(0, NULL);
 	outputPanel->Add(facetcovering);
@@ -732,11 +732,11 @@ void MolFlow::ApplyFacetParams() {
 	}
 
 	// Covering
-	double covering;
+	llong covering;
 	bool coveringNotNumber;
 	bool docovering = false;
 	if (facetcovering->GetNumber(&covering)) {
-		if (covering<0.0) {
+		if (covering<0) {
 			GLMessageBox::Display("Covering must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
@@ -2798,13 +2798,13 @@ void MolFlow::calcStickingnew() {
 
 	double sticking=0.0;
 	double temperature;
-	double covering;
+	llong covering;
 
 	
 	facetcovering->GetNumber(&covering);
 	facetTemperature->GetNumber(&temperature);
 	if (covering){
-		if (covering < 1) {
+		if (covering < 1) { //ToDo: replace 1 by calcNmono
 			sticking = (s1*(1 - covering) + s2 * covering)*(1 - exp(-E_ad / (kb*temperature)));
 		}
 		else
