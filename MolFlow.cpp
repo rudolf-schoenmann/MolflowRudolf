@@ -72,7 +72,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
-std::string appName = "Molflow";
+std::string appName = "ContaminationFlow";
 int appVersionId = 2670; //Compared with available updates. Recompile Interface.cpp if changed
 std::string appVersionName = "2.6.70";
 //---------------------------------------------------

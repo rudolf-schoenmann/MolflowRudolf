@@ -552,7 +552,7 @@ bool SimulationMCStep(size_t nbStep) {
 			//sHandle->currentParticle.distanceTraveled += d;
 
 			double lastFLightTime = sHandle->currentParticle.flightTime; //memorize for partial hits
-			sHandle->currentParticle.flightTime += d / 100.0 / sHandle->currentParticle.velocity; //conversion from cm to m
+			sHandle->currentParticle.flightTime += d / 100.0 / sHandle->currentParticle.velocity; //conversion from cm to m //anscheinend: [d] = cm
 
 			if ((!sHandle->wp.calcConstantFlow && (sHandle->currentParticle.flightTime > sHandle->wp.latestMoment))
 				|| (sHandle->wp.enableDecay && (sHandle->currentParticle.expectedDecayMoment < sHandle->currentParticle.flightTime))) {
