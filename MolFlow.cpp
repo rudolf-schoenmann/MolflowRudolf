@@ -227,6 +227,7 @@ MolFlow::MolFlow()
 	parameterEditor = NULL;
 	importDesorption = NULL;
 	timeSettings = NULL;
+	
 }
 
 // Name: OneTimeSceneInit()
@@ -2800,7 +2801,6 @@ void MolFlow::calcStickingnew() {
 	double temperature;
 	llong covering;
 
-	
 	facetcovering->GetNumber(&covering);
 	facetTemperature->GetNumber(&temperature);
 	if (covering){
@@ -2816,6 +2816,17 @@ void MolFlow::calcStickingnew() {
 
 
 }
+
+double MolFlow::calcNmono() {
+
+	double Nmono = carbondiameter; //Hier muss natürlich noch die richtig Formel hin.
+/*
+return iFacet->sh.area / (pow(76E-12, 2)); //76
+*/
+
+
+}
+
 
 void MolFlow::CrashHandler(Error *e) {
 	char tmp[1024];

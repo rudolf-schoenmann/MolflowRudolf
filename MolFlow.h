@@ -81,6 +81,8 @@ public:
 	void calcFlow();
 	void calcSticking();
 	void calcStickingnew();
+	double calcNmono();
+	const double carbondiameter = 2 * (76E-12);
 
 	bool EvaluateVariable(VLIST *v);
 

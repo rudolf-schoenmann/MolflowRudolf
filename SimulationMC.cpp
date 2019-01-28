@@ -49,7 +49,7 @@ void CalcTotalOutgassing() {
 }
 
 
-double calcNmono(SubprocessFacet *iFacet)
+double calcNmono(SubprocessFacet *iFacet)////Calculates the Number of (carbon equivalent) particles of one monolayer
 {
 	return iFacet->sh.area / (pow(76E-12, 2));
 }
