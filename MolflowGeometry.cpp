@@ -47,10 +47,11 @@ extern SynRad*mApp;
 #endif
 
 
-double updatecovering(Facet *iFacet, Worker *worker)
+double updatecovering(Facet *iFacet, Worker *worker)//Warum heißt diese Funktion so? Da kommt ja gar kein covering vor...
+//Habe den einzigen Aufruf deaktiviert, weil der Blödsinn gemacht hat.
 {
-	//TODO: adapt units, this may not yet be the correct result
-	double N_mono = iFacet->sh.area / (pow(76E-12, 2));
+	//TODO: adapt units, this may not yet be the correct result: is sh.area given in m^2???
+	double N_mono = iFacet->sh.area / (pow(carbondiameter, 2));
 	double dN_surf = worker->wp.gasMass / 12.011;
 
 	return dN_surf / N_mono;
@@ -3170,9 +3171,10 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 				if (facetHitNode.attribute("covering")) {
 					facetCounter->hit.covering = facetHitNode.attribute("covering").as_double();
 				}
-				else {
+				/*
+				else {//Was soll das? Das gibt doch keinen Sinn!
 					facetCounter->hit.covering = facetCounter->hit.nbAbsEquiv*updatecovering(f, work);
-				}
+				}*/
 
 				if (work->displayedMoment == m) { //For immediate display in facet hits list and facet counter
 					f->facetHitCache.hit = facetCounter->hit;

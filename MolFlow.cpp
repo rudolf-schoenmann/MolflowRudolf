@@ -2780,6 +2780,9 @@ void MolFlow::calcSticking() {
 	//facetMass->GetNumber(&mass);
 
 	sticking = abs(outgassing / (area / 10.0)*4.0*sqrt(1.0 / 8.0 / 8.31 / (temperature)*PI*(worker.wp.gasMass*0.001)));
+	//outgassing is given in mbar*l/s = 0,1 Pa*m^3/s => therefore factor of 1/10
+	//area seems to be in units of m^2
+
 	//if (sticking<=1.0) {
 	facetSticking->SetText(sticking);
 	//}
@@ -2804,7 +2807,7 @@ void MolFlow::calcStickingnew() {
 	facetcovering->GetNumber(&covering);
 	facetTemperature->GetNumber(&temperature);
 	if (covering){
-		if (covering < 1) { //ToDo: replace 1 by calcNmono
+		if (covering < 1) { 
 			sticking = (s1*(1 - covering) + s2 * covering)*(1 - exp(-E_ad / (kb*temperature)));
 		}
 		else
@@ -2818,13 +2821,10 @@ void MolFlow::calcStickingnew() {
 }
 
 double MolFlow::calcNmono() {
-
-	double Nmono = carbondiameter; //Hier muss natürlich noch die richtig Formel hin.
-/*
-return iFacet->sh.area / (pow(76E-12, 2)); //76
-*/
-
-
+	double area;
+	facetArea->GetNumber(&area);
+	double Nmono = (facetArea /(pow(carbondiameter, 2)));
+	return Nmono;
 }
 
 

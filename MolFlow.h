@@ -82,8 +82,7 @@ public:
 	void calcSticking();
 	void calcStickingnew();
 	double calcNmono();
-	const double carbondiameter = 2 * (76E-12);
-
+	
 	bool EvaluateVariable(VLIST *v);
 
 	//char* appTitle;
@@ -165,3 +164,5 @@ protected:
     int  FrameMove();
     void ProcessMessage(GLComponent *src,int message);
 };
+
+const double carbondiameter = 2 * (76E-12);
