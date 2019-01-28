@@ -104,7 +104,7 @@ public:
 	GLTextField   *facetPumping;	
     GLLabel       *facetSLabel;
 
-	GLLabel       *facetcoveringLabel;
+	GLLabel       *facetcoverageLabel;
 	GLTextField   *facetcoverage;
 	
     

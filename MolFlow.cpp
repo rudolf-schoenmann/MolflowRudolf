@@ -466,8 +466,8 @@ int MolFlow::OneTimeSceneInit()
 	facetPumping = new GLTextField(0, NULL);
 	outputPanel->Add(facetPumping);
 	
-	facetcoveringLabel = new GLLabel("Coverage:");
-	outputPanel->Add(facetcoveringLabel);
+	facetcoverageLabel = new GLLabel("Coverage:");
+	outputPanel->Add(facetcoverageLabel);
 	facetcoverage = new GLTextField(0, NULL);
 	outputPanel->Add(facetcoverage);
 
@@ -589,7 +589,7 @@ void MolFlow::PlaceComponents() {
 	outputPanel->SetCompBounds(facetPumpingLabel, 7, cursorY += 25, 100, 18);
 	outputPanel->SetCompBounds(facetPumping, 140, cursorY, 45, 18);
 
-	outputPanel->SetCompBounds(facetcoveringLabel, 7, cursorY += 25, 100, 18);
+	outputPanel->SetCompBounds(facetcoverageLabel, 7, cursorY += 25, 100, 18);
 	outputPanel->SetCompBounds(facetcoverage, 140, cursorY, 45, 18);
 
 	facetPanel->SetCompBounds(facetSideLabel, 7, cursorY = 180 + offset_GUI, 50, 18);
@@ -741,10 +741,11 @@ void MolFlow::ApplyFacetParams() {
 	bool coverageNotNumber;
 	bool docoverage = false;
 	if (facetcoverage->GetNumber(&coverage)) {
-		if (covering<0.0) {
+		if (coverage<0.0) {
 			GLMessageBox::Display("Coverage must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
+		covering = llong(abs(coverage * calcNmono()));
 		docoverage = true;
 		coverageNotNumber = false;
 	}
@@ -897,10 +898,10 @@ void MolFlow::ApplyFacetParams() {
 			if (docoverage) {
 				if (!coverageNotNumber) {
 					f->facetHitCache.hit.covering = covering;
-					f->usercovering = "";
+					f->usercoverage = "";
 				}
 				else {
-					f->usercovering = facetcoverage->GetText();
+					f->usercoverage = facetcoverage->GetText();
 				}
 			}
 
@@ -990,9 +991,9 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		bool desorbTypeNE = true;
 		bool recordE = true;
 		bool is2sidedE = true;
-		bool coveringE = true;
+		bool coverageE = true;
 
-		for (size_t sel = 1; sel < selectedFacets.size();sel++) {
+ 		for (size_t sel = 1; sel < selectedFacets.size();sel++) {
 			f = geom->GetFacet(selectedFacets[sel]);
 			double fArea = f->GetArea();
 			stickingE = stickingE && (f0->userSticking.compare(f->userSticking) == 0) && IsEqual(f0->sh.sticking, f->sh.sticking);
@@ -1005,7 +1006,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 			desorbTypeNE = desorbTypeNE && IsEqual(f0->sh.desorbTypeN, f->sh.desorbTypeN);
 			recordE = recordE && (f0->sh.profileType == f->sh.profileType);  //profiles
 			sumArea += fArea;
-			coveringE= coveringE && (f0->usercovering.compare(f->usercovering) == 0) && IsEqual(f0->facetHitCache.hit.covering, f->facetHitCache.hit.covering);
+			coverageE= coverageE && (f0->usercoverage.compare(f->usercoverage) == 0) && IsEqual(f0->facetHitCache.hit.covering, f->facetHitCache.hit.covering);
 		}
 
 		if (nbSel == 1)
@@ -1034,10 +1035,14 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		}
 		else facetOpacity->SetText("...");
 
-		if (coveringE) {
-			if (f0->usercovering.length() == 0)
-				facetcoverage->SetText(f0->facetHitCache.hit.covering);
-			else facetcoverage->SetText(f0->usercovering.c_str());
+		if (coverageE) {
+			if (f0->usercoverage.length() == 0)
+				//facetcoverage->SetText(f0->facetHitCache.hit.covering);
+				facetcoverage->SetText(double(f0->facetHitCache.hit.covering)/calcNmono());// Does not do the right thing, I think...
+				//There must be an error somewhere!
+				//Ich könnte auch einfach coverage oder so anzeigen lassen, aber so sehe ich dann nicht, ob alles passt.
+				//facetcoverage->SetText("blubb");
+			else facetcoverage->SetText(f0->usercoverage.c_str());
 		}
 		else facetcoverage->SetText("...");
 
@@ -1046,7 +1051,6 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		if (desorbTypeNE) facetDesTypeN->SetText(f0->sh.desorbTypeN); else facetDesTypeN->SetText("...");
 		if (recordE) facetRecType->SetSelectedIndex(f0->sh.profileType); else facetRecType->SetSelectedValue("...");
 
-		//if(coveringE) facetcovering->SetText(f0->facetHitCache.hit.covering); facetcovering->SetText("...");
 
 		if (selectedFacets.size() == 1) {
 			facetPumping->SetEditable(true);
@@ -1786,7 +1790,7 @@ void MolFlow::ImportHitBuffer(char *fName) {
 		GLMessageBox::Display("Worker Dataport not initialized yet", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
-	//GLMessageBox::Display("Please choose 'All files' when selecting the import buffer in the next dialog. Buffer files do not have a file ending. They are not included in 'All Molflow supported files'.", "Info", GLDLG_OK, GLDLG_ICONINFO);
+	
 	char fullName[512];
 	char shortName[512];
 	strcpy(fullName, "");
@@ -2093,7 +2097,7 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			// //else if ( src == facetMass ) {
 			//  facetApplyBtn->SetEnabled(true);
 		}
-		else if (src == facetPumping) {
+		else if (src == facetPumping) {// do nothing, we don't need pumping here
 			//calcSticking();
 			//facetApplyBtn->SetEnabled(true);
 			
