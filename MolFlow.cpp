@@ -466,10 +466,10 @@ int MolFlow::OneTimeSceneInit()
 	facetPumping = new GLTextField(0, NULL);
 	outputPanel->Add(facetPumping);
 	
-	facetcoveringLabel = new GLLabel("Covering:");
+	facetcoveringLabel = new GLLabel("Coverage:");
 	outputPanel->Add(facetcoveringLabel);
-	facetcovering = new GLTextField(0, NULL);
-	outputPanel->Add(facetcovering);
+	facetcoverage = new GLTextField(0, NULL);
+	outputPanel->Add(facetcoverage);
 
 	facetTempLabel = new GLLabel("Temperature (\260K):");
 	facetPanel->Add(facetTempLabel);
@@ -590,7 +590,7 @@ void MolFlow::PlaceComponents() {
 	outputPanel->SetCompBounds(facetPumping, 140, cursorY, 45, 18);
 
 	outputPanel->SetCompBounds(facetcoveringLabel, 7, cursorY += 25, 100, 18);
-	outputPanel->SetCompBounds(facetcovering, 140, cursorY, 45, 18);
+	outputPanel->SetCompBounds(facetcoverage, 140, cursorY, 45, 18);
 
 	facetPanel->SetCompBounds(facetSideLabel, 7, cursorY = 180 + offset_GUI, 50, 18);
 	facetPanel->SetCompBounds(facetSideType, 65, cursorY, 130, 18);
@@ -685,8 +685,8 @@ void MolFlow::ClearFacetParams() {
 	facetArea->Clear();
 	facetPumping->SetEditable(false);
 	facetPumping->Clear();
-	facetcovering->SetEditable(false);
-	facetcovering->Clear();
+	facetcoverage->SetEditable(false);
+	facetcoverage->Clear();
 	facetOpacity->Clear();
 	facetOpacity->SetEditable(false);
 	facetTemperature->Clear();
@@ -732,26 +732,30 @@ void MolFlow::ApplyFacetParams() {
 		}
 	}
 
-	// Covering
+	// Coverage and Covering
+	// coverage: one monolayer of contaminating particles means a coverage of 1,0
+	// covering will cout each contaminating parcticle
+
+	double coverage;
 	llong covering;
-	bool coveringNotNumber;
-	bool docovering = false;
-	if (facetcovering->GetNumber(&covering)) {
-		if (covering<0) {
-			GLMessageBox::Display("Covering must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
+	bool coverageNotNumber;
+	bool docoverage = false;
+	if (facetcoverage->GetNumber(&coverage)) {
+		if (covering<0.0) {
+			GLMessageBox::Display("Coverage must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
-		docovering = true;
-		coveringNotNumber = false;
+		docoverage = true;
+		coverageNotNumber = false;
 	}
 	else {
-		if (facetcovering->GetText() == "...") docovering = false;
+		if (facetcoverage->GetText() == "...") docoverage = false;
 		else {/*
 			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
 			UpdateFacetParams();
 			return;*/
-			docovering = true;
-			coveringNotNumber = true;
+			docoverage = true;
+			coverageNotNumber = true;
 		}
 	}
 
@@ -890,13 +894,13 @@ void MolFlow::ApplyFacetParams() {
 				}
 			}
 
-			if (docovering) {
-				if (!coveringNotNumber) {
+			if (docoverage) {
+				if (!coverageNotNumber) {
 					f->facetHitCache.hit.covering = covering;
 					f->usercovering = "";
 				}
 				else {
-					f->usercovering = facetcovering->GetText();
+					f->usercovering = facetcoverage->GetText();
 				}
 			}
 
@@ -1032,10 +1036,10 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 
 		if (coveringE) {
 			if (f0->usercovering.length() == 0)
-				facetcovering->SetText(f0->facetHitCache.hit.covering);
-			else facetcovering->SetText(f0->usercovering.c_str());
+				facetcoverage->SetText(f0->facetHitCache.hit.covering);
+			else facetcoverage->SetText(f0->usercovering.c_str());
 		}
-		else facetcovering->SetText("...");
+		else facetcoverage->SetText("...");
 
 		if (temperatureE) facetTemperature->SetText(f0->sh.temperature); else facetTemperature->SetText("...");
 		if (is2sidedE) facetSideType->SetSelectedIndex(f0->sh.is2sided); else facetSideType->SetSelectedValue("...");
@@ -1119,7 +1123,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		}
 
 		//Enabled->Editable
-		facetcovering->SetEditable(true);
+		facetcoverage->SetEditable(true);
 		facetSticking->SetEditable(true);
 		facetOpacity->SetEditable(true);
 		facetTemperature->SetEditable(true);
@@ -2060,7 +2064,7 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		}
 		else if (src == facetTemperature) {
 			//calcFlow();
-			if(facetcovering->GetText()!="...")
+			if(facetcoverage->GetText()!="...")
 				calcStickingnew();
 			facetApplyBtn->SetEnabled(true);
 		}
@@ -2096,7 +2100,7 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			// //else if ( src == facetMass ) {
 			//  facetApplyBtn->SetEnabled(true);
 		}
-		else if (src == facetcovering) {
+		else if (src == facetcoverage) {
 			calcStickingnew();
 			facetApplyBtn->SetEnabled(true);
 		}
@@ -2124,7 +2128,7 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetFlowArea) {
 			ApplyFacetParams();
 		}
-		else if (src == facetcovering) {
+		else if (src == facetcoverage) {
 			ApplyFacetParams();
 		}
 		break;
@@ -2802,13 +2806,13 @@ void MolFlow::calcStickingnew() {
 
 	double sticking=0.0;
 	double temperature;
-	llong covering;
+	double coverage;
 
-	facetcovering->GetNumber(&covering);
+	facetcoverage->GetNumber(&coverage);
 	facetTemperature->GetNumber(&temperature);
-	if (covering){
-		if (covering < 1) { 
-			sticking = (s1*(1 - covering) + s2 * covering)*(1 - exp(-E_ad / (kb*temperature)));
+	if (coverage){
+		if (coverage < 1) { 
+			sticking = (s1*(1 - coverage) + s2 * coverage)*(1 - exp(-E_ad / (kb*temperature)));
 		}
 		else
 		{
@@ -2823,7 +2827,7 @@ void MolFlow::calcStickingnew() {
 double MolFlow::calcNmono() {
 	double area;
 	facetArea->GetNumber(&area);
-	double Nmono = (facetArea /(pow(carbondiameter, 2)));
+	double Nmono = (area /(pow(carbondiameter, 2)));
 	return Nmono;
 }
 

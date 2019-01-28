@@ -105,7 +105,7 @@ public:
     GLLabel       *facetSLabel;
 
 	GLLabel       *facetcoveringLabel;
-	GLTextField   *facetcovering;
+	GLTextField   *facetcoverage;
 	
     
 	GLLabel       *facetTempLabel;
