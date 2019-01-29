@@ -82,6 +82,7 @@ public:
 	void calcSticking();
 	void calcStickingnew();
 	double calcNmono();
+	double calcdNsurf();
 	
 	bool EvaluateVariable(VLIST *v);
 

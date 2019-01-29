@@ -48,20 +48,6 @@ void CalcTotalOutgassing() {
 
 }
 
-/*
-double calcNmono(SubprocessFacet *iFacet)////Calculates the Number of (carbon equivalent) particles of one monolayer
-{
-	// in Molflow Klasse schieben
-	return iFacet->sh.area / (pow(carbondiameter, 2));
-}
-*/
-
-/*
-double calcdNsurf() {// Calculates the (carbon equivalent realtive) mass factor 
-	// in Molflow Klasse schieben
-	return sHandle->wp.gasMass / 12.011;
-}
-*/
 
 /*
 double calcDesorption(SubprocessFacet *iFacet) {//Returns desorption rate in units of [1/s]. 1 means monolayer.
@@ -86,6 +72,7 @@ double calcDesorption(SubprocessFacet *iFacet) {//Returns desorption rate in uni
 }
 //calcDesorptionRate wird nicht aufgerufen. In Molflow klasse verschieben. Denn im Subprozess wird es nicht gebraucht.
 //calcDesorption ebenso!
+
 double calcDesorptionRate(SubprocessFacet *iFacet) {//Returns desorption rate in units of [Pa*m^3/s].
 	double desorption = calcDesorption(iFacet);
 	double desorptionRate = desorption * (calcNmono(iFacet) / calcdNsurf()) * 1.38E-23 * iFacet->sh.temperature;

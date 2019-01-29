@@ -745,7 +745,7 @@ void MolFlow::ApplyFacetParams() {
 			GLMessageBox::Display("Coverage must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
-		covering = llong(abs(coverage * calcNmono())); //CalcdNsurf
+		covering = llong(abs(coverage * calcNmono()/calcdNsurf()));
 		docoverage = true;
 		coverageNotNumber = false;
 	}
@@ -1037,10 +1037,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 
 		if (coverageE) {
 			if (f0->usercoverage.length() == 0)
-				//facetcoverage->SetText(f0->facetHitCache.hit.covering);
-				facetcoverage->SetText(double((f0->facetHitCache.hit.covering)/calcNmono()));// Add calcdNsurf Funktion!
-				//facetcoverage->SetText(f0->facetHitCache.hit.covering);
-				//facetcoverage->SetText("blubb");
+				facetcoverage->SetText(double((f0->facetHitCache.hit.covering)/(calcNmono()/calcdNsurf())));
 			else facetcoverage->SetText(f0->usercoverage.c_str());
 		}
 		else facetcoverage->SetText("...");
@@ -2835,10 +2832,14 @@ double MolFlow::calcNmono() {//Calculates the Number of (carbon equivalent) part
 	return Nmono;
 }
 
+double MolFlow::calcdNsurf() {// Calculates the (carbon equivalent realtive) mass factor 
+	return (worker.wp.gasMass / 12.011);
+}
+
 //Funktionen neu machen:
 //double calcDesorption("Facet"){}
 //double calcDesorptionRate("Facet"){}
-//calcdNsurf(){}
+
 
 
 void MolFlow::CrashHandler(Error *e) {
