@@ -1852,3 +1852,4 @@ void Worker::ImportHitBuffer(char *fileName)
 	Update(mApp->m_fTime);
 	}
 }
+

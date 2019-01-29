@@ -745,7 +745,7 @@ void MolFlow::ApplyFacetParams() {
 			GLMessageBox::Display("Coverage must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
-		covering = llong(abs(coverage * calcNmono()));
+		covering = llong(abs(coverage * calcNmono())); //CalcdNsurf
 		docoverage = true;
 		coverageNotNumber = false;
 	}
@@ -1038,9 +1038,8 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		if (coverageE) {
 			if (f0->usercoverage.length() == 0)
 				//facetcoverage->SetText(f0->facetHitCache.hit.covering);
-				facetcoverage->SetText(double(f0->facetHitCache.hit.covering)/calcNmono());// Does not do the right thing, I think...
-				//There must be an error somewhere!
-				//Ich könnte auch einfach coverage oder so anzeigen lassen, aber so sehe ich dann nicht, ob alles passt.
+				facetcoverage->SetText(double((f0->facetHitCache.hit.covering)/calcNmono()));// Add calcdNsurf Funktion!
+				//facetcoverage->SetText(f0->facetHitCache.hit.covering);
 				//facetcoverage->SetText("blubb");
 			else facetcoverage->SetText(f0->usercoverage.c_str());
 		}
@@ -2783,13 +2782,14 @@ void MolFlow::calcSticking() {
 	//double mass;
 
 	facetPumping->GetNumber(&outgassing);
-	facetArea->GetNumber(&area);
+	facetArea->GetNumber(&area); //area is in units of [cm^2]
 	facetTemperature->GetNumber(&temperature);
 	//facetMass->GetNumber(&mass);
 
 	sticking = abs(outgassing / (area / 10.0)*4.0*sqrt(1.0 / 8.0 / 8.31 / (temperature)*PI*(worker.wp.gasMass*0.001)));
-	//outgassing is given in mbar*l/s = 0,1 Pa*m^3/s => therefore factor of 1/10
-	//area seems to be in units of m^2
+	//outgassing is here the variable, where the pumping speed [l/s] is stored.
+	//liters are converted in m^3 and cm^3, therefore factor 10 remains!
+	
 
 	//if (sticking<=1.0) {
 	facetSticking->SetText(sticking);
@@ -2828,12 +2828,17 @@ void MolFlow::calcStickingnew() {
 
 }
 
-double MolFlow::calcNmono() {
+double MolFlow::calcNmono() {//Calculates the Number of (carbon equivalent) particles of one monolayer.
 	double area;
-	facetArea->GetNumber(&area);
-	double Nmono = (area /(pow(carbondiameter, 2)));
+	facetArea->GetNumber(&area); //area is in units of [cm^2] => has to be converted to [m^2]
+	double Nmono = (area * 1E-4 /(pow(carbondiameter, 2)));
 	return Nmono;
 }
+
+//Funktionen neu machen:
+//double calcDesorption("Facet"){}
+//double calcDesorptionRate("Facet"){}
+//calcdNsurf(){}
 
 
 void MolFlow::CrashHandler(Error *e) {
