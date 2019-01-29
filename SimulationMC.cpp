@@ -1530,7 +1530,9 @@ void IncreaseFacetCounter(SubprocessFacet *f, double time, size_t hit, size_t de
 			if (desorb > 0)
 				f->tmpCounter[m].hit.covering -= 1;
 
-			f->tmpCounter[m].hit.covering = f->tmpCounter[m].hit.covering < 0.0 ? 0 : f->tmpCounter[m].hit.covering;
+			f->tmpCounter[m].hit.covering = f->tmpCounter[m].hit.covering < 0.0 ? 0 : f->tmpCounter[m].hit.covering;//Für den Fall,
+			//dass covering kleiner Null würde. Das ist aber nicht die physikalisch richtige Lösung => überlegen.
+			//Überlegungen siehe MolflowLinux
 		}
 	}
 }
