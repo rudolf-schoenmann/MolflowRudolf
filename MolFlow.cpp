@@ -43,7 +43,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include <numeric> //std::iota
 
 #include "Interface.h"
-#include "AppUpdater.h"
+//#include "AppUpdater.h"
 #include "Worker.h"
 #include "ImportDesorption.h"
 #include "TimeSettings.h"
@@ -73,8 +73,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "ContaminationFlow";
-int appVersionId = 2670; //Compared with available updates. Recompile Interface.cpp if changed
-std::string appVersionName = "2.6.70";
+int appVersionId = 0; //Compared with available updates. Recompile Interface.cpp if changed
+std::string appVersionName = "0";
 //---------------------------------------------------
 
 static const char *fileLFilters = "All MolFlow supported files\0*.txt;*.xml;*.zip;*.geo;*.geo7z;*.syn;*.syn7z;*.str;*.stl;*.ase\0"
@@ -89,9 +89,9 @@ int   cWidth[] = { 30, 56, 50, 50 };
 char *cName[] = { "#", "Hits", "Des", "Abs" };
 
 #ifdef _DEBUG
-std::string appTitle = "MolFlow+ debug version (Compiled " __DATE__ " " __TIME__ ")";
+std::string appTitle = "ContaminationFlow debug version (Compiled " __DATE__ " " __TIME__ ")";
 #else
-std::string appTitle = "Molflow+ " + appVersionName + " (" __DATE__ ")";
+std::string appTitle = "ContaminationFlow " + appVersionName + " (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "A","D","H","MCH","P","DEN","Z","V","T","AR","a","d","h","mch","p","den","z","v","t","ar","," };
@@ -445,6 +445,10 @@ int MolFlow::OneTimeSceneInit()
 	inputPanel->Add(facetFIAreaLabel);
 	facetFlowArea = new GLTextField(0, NULL);
 	inputPanel->Add(facetFlowArea);
+	facetDesRateLabel = new GLLabel("Desorption rate [Pa m^3/s]:");
+	inputPanel->Add(facetDesRateLabel);
+	facetDesRate = new GLTextField(0, NULL);
+	inputPanel->Add(facetDesRate);
 
 	/*facetUseDesFileLabel = new GLLabel("Desorp. file");
 	facetPanel->Add(facetUseDesFileLabel);
@@ -468,8 +472,13 @@ int MolFlow::OneTimeSceneInit()
 	
 	facetcoverageLabel = new GLLabel("Coverage:");
 	outputPanel->Add(facetcoverageLabel);
-	facetcoverage = new GLTextField(0, NULL);
+	facetcoverage = new GLTextField(0, NULL); //can probably be optimized in functions below
 	outputPanel->Add(facetcoverage);
+
+	facetcoveringLabel = new GLLabel("Covering:");
+	outputPanel->Add(facetcoveringLabel);
+	facetcovering = new GLTextField(0, NULL);
+	outputPanel->Add(facetcovering);
 
 	facetTempLabel = new GLLabel("Temperature (\260K):");
 	facetPanel->Add(facetTempLabel);
@@ -560,10 +569,11 @@ void MolFlow::PlaceComponents() {
 	sy += (togglePanel->GetHeight() + 5);
 
 	// Selected facet -----------------------------------------
-	int offset_GUI = 25;
-	facetPanel->SetBounds(sx, sy, 202, 330 + offset_GUI);
+	int offset_GUI = 25+25;
+	int offset_GUI1 = 25;
+	facetPanel->SetBounds(sx, sy, 202, 330 + offset_GUI+ offset_GUI1);
 
-	facetPanel->SetCompBounds(inputPanel, 5, 16, 192, 90);
+	facetPanel->SetCompBounds(inputPanel, 5, 16, 192, 90 + offset_GUI1);
 
 	int cursorY = 15;
 	inputPanel->SetCompBounds(facetDLabel, 5, cursorY, 60, 18);
@@ -575,6 +585,9 @@ void MolFlow::PlaceComponents() {
 
 	inputPanel->SetCompBounds(facetFIAreaLabel, 5, cursorY += 25, 110, 18);
 	inputPanel->SetCompBounds(facetFlowArea, 140, cursorY, 45, 18);
+
+	inputPanel->SetCompBounds(facetDesRateLabel, 5, cursorY += 25, 110, 18);
+	inputPanel->SetCompBounds(facetDesRate, 140, cursorY, 45, 18);
 
 	//inputPanel->SetCompBounds(facetUseDesFileLabel,5,90,60,18);
 	//inputPanel->SetCompBounds(facetUseDesFile,65,90,120,18);
@@ -592,7 +605,10 @@ void MolFlow::PlaceComponents() {
 	outputPanel->SetCompBounds(facetcoverageLabel, 7, cursorY += 25, 100, 18);
 	outputPanel->SetCompBounds(facetcoverage, 140, cursorY, 45, 18);
 
-	facetPanel->SetCompBounds(facetSideLabel, 7, cursorY = 180 + offset_GUI, 50, 18);
+	outputPanel->SetCompBounds(facetcoveringLabel, 7, cursorY += 25, 100, 18);
+	outputPanel->SetCompBounds(facetcovering, 140, cursorY, 45, 18);
+
+	facetPanel->SetCompBounds(facetSideLabel, 7, cursorY = 180 + offset_GUI+ offset_GUI1, 50, 18);
 	facetPanel->SetCompBounds(facetSideType, 65, cursorY, 130, 18);
 
 	facetPanel->SetCompBounds(facetTLabel, 7, cursorY += 25, 100, 18);
@@ -681,12 +697,16 @@ void MolFlow::ClearFacetParams() {
 	facetFlow->SetEditable(false);
 	facetFlowArea->Clear();
 	facetFlowArea->SetEditable(false);
+	facetDesRate->Clear();
+	facetDesRate->SetEditable(false);
 	facetArea->SetEditable(false);
 	facetArea->Clear();
 	facetPumping->SetEditable(false);
 	facetPumping->Clear();
 	facetcoverage->SetEditable(false);
 	facetcoverage->Clear();
+	facetcovering->SetEditable(false);
+	facetcovering->Clear();
 	facetOpacity->Clear();
 	facetOpacity->SetEditable(false);
 	facetTemperature->Clear();
@@ -732,6 +752,29 @@ void MolFlow::ApplyFacetParams() {
 		}
 	}
 
+	// DesRate
+	double DesRate;
+	bool DesRateNotNumber;
+	bool doDesRate = false;
+	if (facetDesRate->GetNumber(&DesRate)) {
+		if (DesRate <0.0 ) {
+			GLMessageBox::Display("Desorption Rate must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		doDesRate = true;
+		DesRateNotNumber = false;
+	}
+	else {
+		if (facetDesRate->GetText() == "...") doDesRate = false;
+		else {/*
+			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+			UpdateFacetParams();
+			return;*/
+			doDesRate = true;
+			DesRateNotNumber = true;
+		}
+	}
+
 	// Coverage and Covering
 	// coverage: one monolayer of contaminating particles means a coverage of 1,0
 	// covering will cout each contaminating parcticle
@@ -740,12 +783,15 @@ void MolFlow::ApplyFacetParams() {
 	llong covering;
 	bool coverageNotNumber;
 	bool docoverage = false;
+	bool coveringNotNumber;
+	bool docovering = false;
+
 	if (facetcoverage->GetNumber(&coverage)) {
 		if (coverage<0.0) {
 			GLMessageBox::Display("Coverage must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
-		covering = llong(abs(coverage * calcNmono()/calcdNsurf()));
+		//covering = llong(abs(coverage * calcNmono()/calcdNsurf()));
 		docoverage = true;
 		coverageNotNumber = false;
 	}
@@ -757,6 +803,26 @@ void MolFlow::ApplyFacetParams() {
 			return;*/
 			docoverage = true;
 			coverageNotNumber = true;
+		}
+	}
+
+	if (facetcovering->GetNumberSizeT(&covering)) {
+		if (covering < 0) {
+			GLMessageBox::Display("Covering must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		//covering = llong(abs(coverage * calcNmono() / calcdNsurf()));
+		docovering = true;
+		coveringNotNumber = false;
+	}
+	else {
+		if (facetcovering->GetText() == "...") docovering = false;
+		else {/*
+			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+			UpdateFacetParams();
+			return;*/
+			docovering = true;
+			coveringNotNumber = true;
 		}
 	}
 
@@ -895,6 +961,16 @@ void MolFlow::ApplyFacetParams() {
 				}
 			}
 
+			if (doDesRate) {
+				if (!DesRateNotNumber) {
+					f->sh.desorption = DesRate;
+					f->userdesorption = "";
+				}
+				else {
+					f->userdesorption = facetDesRate->GetText();
+				}
+			}
+
 			if (docoverage) {
 				if (!coverageNotNumber) {
 					f->facetHitCache.hit.covering = covering;
@@ -902,6 +978,16 @@ void MolFlow::ApplyFacetParams() {
 				}
 				else {
 					f->usercoverage = facetcoverage->GetText();
+				}
+			}
+
+			if (docovering) {
+				if (!covering) {
+					f->facetHitCache.hit.covering = covering;
+					f->usercovering = "";
+				}
+				else {
+					f->usercovering = facetcovering->GetText();
 				}
 			}
 
@@ -992,6 +1078,8 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		bool recordE = true;
 		bool is2sidedE = true;
 		bool coverageE = true;
+		bool coveringE = true;
+		bool desrateE = true;
 
  		for (size_t sel = 1; sel < selectedFacets.size();sel++) {
 			f = geom->GetFacet(selectedFacets[sel]);
@@ -1007,6 +1095,8 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 			recordE = recordE && (f0->sh.profileType == f->sh.profileType);  //profiles
 			sumArea += fArea;
 			coverageE= coverageE && (f0->usercoverage.compare(f->usercoverage) == 0) && IsEqual(f0->facetHitCache.hit.covering, f->facetHitCache.hit.covering);
+			coveringE = coveringE && (f0->usercovering.compare(f->usercovering) == 0) && IsEqual(f0->facetHitCache.hit.covering, f->facetHitCache.hit.covering);
+			desrateE= desrateE && (f0->userdesorption.compare(f->userdesorption) == 0) && IsEqual(f0->sh.desorption, f->sh.desorption);
 		}
 
 		if (nbSel == 1)
@@ -1028,6 +1118,15 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		}
 		else facetSticking->SetText("...");
 
+		if (desrateE) {
+			if (f0->userdesorption.length() == 0) {
+				f0->sh.desorption = f0->sh.desorption < 0.0 ? 0.0 : f0->sh.desorption;
+				facetDesRate->SetText(f0->sh.desorption);
+			}
+			else facetDesRate->SetText(f0->userdesorption.c_str());
+		}
+		else facetDesRate->SetText("...");
+
 		if (opacityE) {
 			if (f0->userOpacity.length() == 0)
 				facetOpacity->SetText(f0->sh.opacity);
@@ -1042,6 +1141,13 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		}
 		else facetcoverage->SetText("...");
 
+		if (coveringE) {
+			if (f0->usercovering.length() == 0)
+				facetcovering->SetText(llong((f0->facetHitCache.hit.covering)));
+			else facetcovering->SetText(f0->usercovering.c_str());
+		}
+		else facetcovering->SetText("...");
+
 		if (temperatureE) facetTemperature->SetText(f0->sh.temperature); else facetTemperature->SetText("...");
 		if (is2sidedE) facetSideType->SetSelectedIndex(f0->sh.is2sided); else facetSideType->SetSelectedValue("...");
 		if (desorbTypeNE) facetDesTypeN->SetText(f0->sh.desorbTypeN); else facetDesTypeN->SetText("...");
@@ -1049,14 +1155,14 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 
 
 		if (selectedFacets.size() == 1) {
-			facetPumping->SetEditable(true);
+			facetPumping->SetFocusable(true);
 			//calcFlow();
 			facetPumping->SetText(0);
 
 
 		}
 		else {
-			facetPumping->SetEditable(false);
+			facetPumping->SetFocusable(false);
 			facetPumping->SetText("...");
 		}
 
@@ -1123,8 +1229,10 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		}
 
 		//Enabled->Editable
+		facetDesRate->SetFocusable(true);
 		facetcoverage->SetEditable(true);
-		facetSticking->SetEditable(true);
+		facetcovering->SetEditable(true);
+		facetSticking->SetFocusable(true);
 		facetOpacity->SetEditable(true);
 		facetTemperature->SetEditable(true);
 		facetSideType->SetEditable(true);
@@ -2064,8 +2172,10 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		}
 		else if (src == facetTemperature) {
 			//calcFlow();
-			if(facetcoverage->GetText()!="...")
+			if (facetcoverage->GetText() != "...") {
 				calcStickingnew();
+				calcDesorptionRate();
+			}
 			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetFlow) {
@@ -2101,7 +2211,15 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			//  facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetcoverage) {
+			calcCovering();
 			calcStickingnew();
+			calcDesorptionRate();
+			facetApplyBtn->SetEnabled(true);
+		}
+		else if (src == facetcovering) {
+			calcCoverage();
+			calcStickingnew();
+			calcDesorptionRate();
 			facetApplyBtn->SetEnabled(true);
 		}
 		break;
@@ -2129,6 +2247,9 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			ApplyFacetParams();
 		}
 		else if (src == facetcoverage) {
+			ApplyFacetParams();
+		}
+		else if (src == facetcovering) {
 			ApplyFacetParams();
 		}
 		break;
@@ -2825,6 +2946,20 @@ void MolFlow::calcStickingnew() {
 
 }
 
+void MolFlow::calcCoverage() {
+	llong covering;
+	facetcovering->GetNumberSizeT(&covering);
+	facetcoverage->SetText(double((covering) / (calcNmono() / calcdNsurf())));
+
+}
+
+void MolFlow::calcCovering() {
+	double coverage;
+	facetcoverage->GetNumber(&coverage);
+	facetcovering->SetText(llong(abs(coverage * calcNmono() / calcdNsurf())));
+
+}
+
 double MolFlow::calcNmono() {//Calculates the Number of (carbon equivalent) particles of one monolayer.
 	double area;
 	facetArea->GetNumber(&area); //area is in units of [cm^2] => has to be converted to [m^2]
@@ -2839,6 +2974,30 @@ double MolFlow::calcdNsurf() {// Calculates the (carbon equivalent realtive) mas
 //Funktionen neu machen:
 //double calcDesorption("Facet"){}
 //double calcDesorptionRate("Facet"){}
+
+double MolFlow::calcDesorption() {
+	double d = 1;
+	double E_de = 1.5E-21;
+	double coverage;
+	double temperature;
+
+	facetcoverage->GetNumber(&coverage);
+	facetTemperature->GetNumber(&temperature);
+
+	double desorption = 1.0 / tau * pow(coverage, d) *exp(-E_de / (kb*temperature));
+	return desorption;
+}
+
+void MolFlow::calcDesorptionRate() {
+	double temperature;
+	facetTemperature->GetNumber(&temperature);
+
+	double desorption = calcDesorption();
+	double desorptionRate = desorption * (calcNmono() / calcdNsurf()) * 1.38E-23* temperature;
+	desorptionRate = desorptionRate<0.0? 0.0 : desorptionRate;
+	facetDesRate->SetText(desorptionRate);
+	
+}
 
 
 

@@ -34,7 +34,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
 #include "Buffer_shared.h"
-#include "AppUpdater.h"
+//#include "AppUpdater.h"
 #ifdef MOLFLOW
 #include "MolFlow.h"
 #endif
@@ -247,13 +247,13 @@ void GlobalSettings::Update() {
 
 	autoSaveText->SetText(mApp->autoSaveFrequency);
 	chkSimuOnly->SetState(mApp->autoSaveSimuOnly);
-	if (mApp->appUpdater) { //Updater initialized
+	/*if (mApp->appUpdater) { //Updater initialized
 		chkCheckForUpdates->SetState(mApp->appUpdater->IsUpdateCheckAllowed());
 	}
 	else {
 		chkCheckForUpdates->SetState(0);
 		chkCheckForUpdates->SetEnabled(false);
-	}
+	}*/
 	chkAutoUpdateFormulas->SetState(mApp->autoUpdateFormulas);
 	chkCompressSavedFiles->SetState(mApp->compressSavedFiles);
 
@@ -416,11 +416,11 @@ void GlobalSettings::ProcessMessage(GLComponent *src, int message) {
 			for (int i = 0; i < MAX_VIEWER; i++)  mApp->viewer[i]->UpdateMatrix();
 			mApp->wereEvents = true;
 			bool updateCheckPreference = chkCheckForUpdates->GetState();
-			if (mApp->appUpdater) {
+			/*if (mApp->appUpdater) {
 				if (mApp->appUpdater->IsUpdateCheckAllowed() != updateCheckPreference) {
 					mApp->appUpdater->SetUserUpdatePreference(updateCheckPreference);
 				}
-			}
+			}*/
 			mApp->autoUpdateFormulas = chkAutoUpdateFormulas->GetState();
 			mApp->compressSavedFiles = chkCompressSavedFiles->GetState();
 			mApp->autoSaveSimuOnly = chkSimuOnly->GetState();

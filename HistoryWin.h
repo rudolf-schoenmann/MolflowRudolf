@@ -37,7 +37,7 @@ class HistoryWin : public GLWindow {
 public:
 	// Construction
 	HistoryWin(Worker *w);
-	std::vector< std::pair<float, std::vector<double>> > pointintime_list;
+	std::vector< std::pair<float, std::vector<size_t>> > pointintime_list;
 	size_t l_hist;
 
 	// Implementation

@@ -42,6 +42,10 @@ class ParameterEditor;
 
 class Error;
 
+const double carbondiameter = 2 * 76E-12;
+const double kb = 1.38E-23;
+const double tau = 1E-13;
+
 class MolFlow : public Interface
 {
 public:
@@ -81,6 +85,10 @@ public:
 	void calcFlow();
 	void calcSticking();
 	void calcStickingnew();
+	void calcCoverage();
+	void calcCovering();
+	double calcDesorption();
+	void calcDesorptionRate();
 	double calcNmono();
 	double calcdNsurf();
 	
@@ -105,8 +113,13 @@ public:
 	GLTextField   *facetPumping;	
     GLLabel       *facetSLabel;
 
+	GLLabel       *facetDesRateLabel;
+	GLTextField   *facetDesRate;
+
 	GLLabel       *facetcoverageLabel;
 	GLTextField   *facetcoverage;
+	GLLabel       *facetcoveringLabel;
+	GLTextField   *facetcovering;
 	
     
 	GLLabel       *facetTempLabel;
@@ -165,5 +178,3 @@ protected:
     int  FrameMove();
     void ProcessMessage(GLComponent *src,int message);
 };
-
-const double carbondiameter = 2 * (76E-12);

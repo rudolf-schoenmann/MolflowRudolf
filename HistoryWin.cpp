@@ -35,7 +35,6 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
 #include "Buffer_shared.h"
-#include "AppUpdater.h"
 #include "Interface.h"
 #include <fstream>
 #ifdef MOLFLOW
@@ -107,7 +106,7 @@ HistoryWin::HistoryWin(Worker *w) :GLWindow() {
 
 	// variable initialization
 	l_hist = 0;
-	pointintime_list = std::vector< std::pair<float, std::vector<double>> >();
+	pointintime_list = std::vector< std::pair<float, std::vector<size_t>> >();
 	selectedRows = std::vector<size_t>();
 	// set initial list
 	if(nb_Facets!=0)
@@ -143,13 +142,13 @@ void HistoryWin::UpdateList() {
 	else
 		time = worker->simuTime * (float)1000.0;
 
-	std::vector<double> covering;
-	covering = std::vector<double>();
+	std::vector<size_t> covering;
+	covering = std::vector<size_t>();
 
 
 	for (int i = 0;i < nb_Facets;i++) {
 		Facet *f = geom->GetFacet(i);
-		double cov = f->facetHitCache.hit.covering;
+		size_t cov = f->facetHitCache.hit.covering;
 		covering.push_back(cov);
 		//sprintf(tmp, "%g", cov);
 		//historyList->SetValueAt(i+1,l_hist, tmp);
@@ -172,7 +171,7 @@ void HistoryWin::UpdateUI() {
 		sprintf(tmp, "%g", pointintime_list[i].first);
 		historyList->SetValueAt(0, i, tmp);
 		for (int j = 0;j < nb_Facets;j++) {
-			sprintf(tmp, "%g", pointintime_list[i].second[j]);
+			sprintf(tmp, "%llu", pointintime_list[i].second[j]);
 			historyList->SetValueAt(j+1,i, tmp);
 		}
 	}
@@ -352,10 +351,10 @@ void HistoryWin::importList(char *fileName) {
 		std::string line;
 
 		while (std::getline(input, line)) {
-			std::vector<double> currentstep;
-			currentstep = std::vector<double>();
+			std::vector<size_t> currentstep;
+			currentstep = std::vector<size_t>();
 
-			double covering;
+			size_t covering;
 			float time;
 			std::istringstream is(line);
 

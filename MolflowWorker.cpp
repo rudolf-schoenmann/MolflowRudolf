@@ -1133,7 +1133,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 		size_t nbFacet = geom->GetNbFacet();
 		for (int i = 0; i < nbFacet; i++) {
 			Facet *f = geom->GetFacet(i);
-			double covering;
+			llong covering;
 			covering = f->facetHitCache.hit.covering;
 			FacetHitBuffer *facetHitBuffer = (FacetHitBuffer *)(hitbuffer + f->sh.hitOffset);
 			facetHitBuffer->hit.covering = covering;

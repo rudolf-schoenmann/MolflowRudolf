@@ -3169,7 +3169,7 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 					facetCounter->hit.sum_1_per_velocity = 4.0 * Sqr(facetCounter->hit.nbHitEquiv + static_cast<double>(facetCounter->hit.nbDesorbed))/ facetCounter->hit.sum_1_per_ort_velocity;
 				}
 				if (facetHitNode.attribute("covering")) {
-					facetCounter->hit.covering = facetHitNode.attribute("covering").as_double();
+					facetCounter->hit.covering = facetHitNode.attribute("covering").as_llong();
 				}
 				/*
 				else {//Was soll das? Das gibt doch keinen Sinn!
@@ -3183,13 +3183,13 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 			else { //No hit information, so set to 0
 				facetCounter->hit.nbMCHit =
 				facetCounter->hit.nbDesorbed =
+				facetCounter->hit.covering =
 				0;
 				facetCounter->hit.sum_v_ort = 
 				facetCounter->hit.nbHitEquiv =
 				facetCounter->hit.sum_1_per_ort_velocity =
 				facetCounter->hit.sum_1_per_velocity =
 				facetCounter->hit.nbAbsEquiv =
-				facetCounter->hit.covering=
 				0.0;
 			}
 

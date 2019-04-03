@@ -27,6 +27,10 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "Parameter.h"
 #include <tuple>
 
+const double carbondiameter = 2 * 76E-12;
+const double kb = 1.38E-23;
+const double tau = 1E-13;
+
 class Anglemap {
 public:
 	std::vector<size_t>   pdf;		  // Incident angle distribution, phi and theta, not normalized. Used either for recording or for 2nd order interpolation
@@ -248,4 +252,3 @@ double GetStickingAt(SubprocessFacet *src, double time);
 double GetOpacityAt(SubprocessFacet *src, double time);
 void   IncreaseFacetCounter(SubprocessFacet *f, double time, size_t hit, size_t desorb, size_t absorb, double sum_1_per_v, double sum_v_ort);
 void   TreatMovingFacet();
-const double carbondiameter = 2 * (76E-12);
