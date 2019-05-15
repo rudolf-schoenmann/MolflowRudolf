@@ -58,6 +58,7 @@ public:
     
     void LoadFile(char *fName=NULL);
 	void InsertGeometry(bool newStr,char *fName=NULL);
+	void InsertGeometryBuffer(char *shortName);
 	void SaveFile();
     
 	//void ImportDesorption_DES(); //Deprecated
@@ -169,6 +170,7 @@ public:
 	void ExportHitBufferToFile(); //new function to export hit buffer for simulation on Linux HPC, added by Rudi.
 	void ExportLoadBufferToFile(); //new function to export load buffer for simulation on Linux HPC, added by Rudi.
 	void ImportHitBuffer(char *fName); //new function to import hit buffer of simulation on Linux HPC, added by Rudi.
+	void ImportLoadBuffer(char *fName); //new function to import hit buffer of simulation on Linux HPC, added by Rudi.
 
 protected:
 	void LoadParameterCatalog();

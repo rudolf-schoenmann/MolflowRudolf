@@ -88,6 +88,7 @@ public:
 #pragma endregion
 
 	void SerializeForLoader(cereal::BinaryOutputArchive&);
+	void ImportFromLoader(cereal::BinaryInputArchive&);
 	/*
 	template <class Archive> void serialize(Archive & archive) {
 		archive(

@@ -346,6 +346,7 @@ int MolFlow::OneTimeSceneInit()
 	menu->GetSubMenu("File")->GetSubMenu("Export buffer")->Add("Export hit buffer", MENU_FILE_EXPORTBUFFER_HIT);
 	menu->GetSubMenu("File")->Add("&Import buffer");
 	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("&Import hit buffer", MENU_FILE_IMPORTBUFFER_HIT);
+	menu->GetSubMenu("File")->GetSubMenu("Import buffer")->Add("&Import load buffer", MENU_FILE_IMPORTBUFFER_LOAD);
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT); //Moved here from OnetimeSceneinit_shared to assert it's the last menu item
@@ -1802,6 +1803,73 @@ void MolFlow::InsertGeometry(bool newStr, char *fName) {
 	changedSinceSave = true;
 }
 
+void MolFlow::InsertGeometryBuffer(char *shortName) {
+	if (!AskToReset()) return;
+	ResetSimulation(false);
+
+	try {
+
+		Geometry *geom = worker.GetGeometry();
+		worker.CalcTotalOutgassing();
+
+		//Increase BB
+		for (int i = 0; i < MAX_VIEWER; i++)
+			viewer[i]->SetWorker(&worker);
+
+		//UpdateModelParams();
+		startSimu->SetEnabled(true);
+
+		compACBtn->SetEnabled(modeCombo->GetSelectedIndex() == 1);
+		singleACBtn->SetEnabled(modeCombo->GetSelectedIndex() == 1);
+		//resetSimu->SetEnabled(true);
+		//ClearFacetParams();
+		//nbDesStart = worker.globalHitCache.globalHits.hit.nbDesorbed;
+		//nbHitStart = worker.globalHitCache.globalHits.hit.nbMC;
+		geom->viewStruct = -1;
+
+		//worker.LoadTexturesGEO(fullName);
+		UpdateStructMenu();
+		if (profilePlotter) profilePlotter->Reset();
+		if (pressureEvolution) pressureEvolution->Reset();
+		if (timewisePlotter) timewisePlotter->Reset();
+		//UpdateCurrentDir(fullName);
+
+		geom->CheckCollinear();
+		geom->CheckNonSimple();
+		geom->CheckIsolatedVertex();
+
+		/*
+		// Set up view
+		// Default
+		viewer[0]->SetProjection(ORTHOGRAPHIC_PROJ);
+		viewer[0]->ToFrontView();
+		viewer[1]->SetProjection(ORTHOGRAPHIC_PROJ);
+		viewer[1]->ToTopView();
+		viewer[2]->SetProjection(ORTHOGRAPHIC_PROJ);
+		viewer[2]->ToSideView();
+		viewer[3]->SetProjection(PERSPECTIVE_PROJ);
+		viewer[3]->ToFrontView();
+		SelectViewer(0);
+		*/
+
+		UpdatePlotters();
+		if (outgassingMap) outgassingMap->Update(m_fTime, true);
+		if (facetDetails) facetDetails->Update();
+		if (facetCoordinates) facetCoordinates->UpdateFromSelection();
+		if (vertexCoordinates) vertexCoordinates->Update();
+		if (formulaEditor) formulaEditor->Refresh();
+
+	}
+	catch (Error &e) {
+
+		char errMsg[512];
+		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
+		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+
+	}
+	changedSinceSave = true;
+}
+
 void MolFlow::ClearParameters() {
 	worker.parameters = std::vector<Parameter>();
 	if (parameterEditor) parameterEditor->UpdateCombo();
@@ -1867,8 +1935,8 @@ void MolFlow::ExportHitBufferToFile() {
 void MolFlow::ExportLoadBufferToFile() {
 	Geometry *geom = worker.GetGeometry();
 	if (geom->GetNbFacet() == 0) {
-		GLMessageBox::Display("Empty selection", "Error", GLDLG_OK, GLDLG_ICONERROR);
-		return;
+		//GLMessageBox::Display("Empty selection", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		//return;
 	}
 	FILENAME *fn = GLFileBox::SaveFile(currentDir, NULL, "Save File", fileBufferFilters, 0);
 	if (fn) {
@@ -1910,6 +1978,8 @@ void MolFlow::ImportHitBuffer(char *fName) {
 	if (strlen(fullName) == 0) {
 		return;
 	}
+
+
 	char *lPart = strrchr(fullName, '\\');
 	if (lPart) strcpy(shortName, lPart + 1);
 	else strcpy(shortName, fullName);
@@ -1924,11 +1994,126 @@ void MolFlow::ImportHitBuffer(char *fName) {
 	}
 }
 
+void MolFlow::ImportLoadBuffer(char *fName) {
+
+	char fullName[512];
+	char shortName[512];
+	strcpy(fullName, "");
+
+	if (fName == NULL) {
+		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open file", "All files\0*.*\0", 0);
+		if (fn)
+			strcpy(fullName, fn->fullName);
+	}
+	else {
+		strcpy(fullName, fName);
+	}
+
+	if (strlen(fullName) == 0) {
+		return;
+	}
+
+	char *lPart = strrchr(fullName, '\\');
+	if (lPart) strcpy(shortName, lPart + 1);
+	else strcpy(shortName, fullName);
+	//try {
+	//	worker.ImportLoadBuffer(fullName);
+	//	int test = 0;
+	//}
+	//catch (Error &e) {
+	//	char errMsg[512];
+	//	sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
+	//	GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+	//	RemoveRecent(fName);
+	//}
+
+
+
+	try {
+		ClearFormulas();
+		ClearParameters();
+		ClearAllSelections();
+		ClearAllViews();
+		ResetSimulation(false);
+		worker.ImportLoadBuffer(fullName);
+
+		Geometry *geom = worker.GetGeometry();
+
+		// Default initialisation
+		for (int i = 0; i < MAX_VIEWER; i++)
+			viewer[i]->SetWorker(&worker);
+
+		//UpdateModelParams();
+		startSimu->SetEnabled(true);
+		compACBtn->SetEnabled(modeCombo->GetSelectedIndex() == 1);
+		singleACBtn->SetEnabled(modeCombo->GetSelectedIndex() == 1);
+		//resetSimu->SetEnabled(true);
+		ClearFacetParams();
+		nbDesStart = worker.globalHitCache.globalHits.hit.nbDesorbed;
+		nbHitStart = worker.globalHitCache.globalHits.hit.nbMCHit;
+		AddRecent(fullName);
+		geom->viewStruct = -1;
+
+		UpdateStructMenu();
+		UpdateCurrentDir(fullName);
+
+		// Check non simple polygon
+		//geom->CheckCollinear();
+		geom->CheckNonSimple();
+		geom->CheckIsolatedVertex();
+		
+		// Set up view
+		// Default
+		viewer[0]->SetProjection(ORTHOGRAPHIC_PROJ);
+		viewer[0]->ToFrontView();
+		viewer[1]->SetProjection(ORTHOGRAPHIC_PROJ);
+		viewer[1]->ToTopView();
+		viewer[2]->SetProjection(ORTHOGRAPHIC_PROJ);
+		viewer[2]->ToSideView();
+		viewer[3]->SetProjection(PERSPECTIVE_PROJ);
+		viewer[3]->ToFrontView();
+		SelectViewer(0);
+
+		ResetAutoSaveTimer();
+		//UpdatePlotters();
+
+		if (timeSettings) timeSettings->RefreshMoments();
+		if (momentsEditor) momentsEditor->Refresh();
+		if (pressureEvolution) pressureEvolution->Reset();
+		if (timewisePlotter) timewisePlotter->Refresh();
+		if (histogramPlotter) histogramPlotter->Reset();
+		if (histogramSettings) histogramSettings->Refresh({});
+		//if (profilePlotter) profilePlotter->Refresh(); //Might have loaded views
+		if (texturePlotter) texturePlotter->Update(0.0, true);
+		//if (parameterEditor) parameterEditor->UpdateCombo(); //Done by ClearParameters()
+		if (textureScaling) textureScaling->Update();
+		if (outgassingMap) outgassingMap->Update(m_fTime, true);
+		if (facetDetails) facetDetails->Update();
+		if (facetCoordinates) facetCoordinates->UpdateFromSelection();
+		if (vertexCoordinates) vertexCoordinates->Update();
+		if (movement) movement->Update();
+		if (globalSettings && globalSettings->IsVisible()) globalSettings->Update();
+		if (formulaEditor) formulaEditor->Refresh();
+	}
+	catch (Error &e) {
+
+		char errMsg[512];
+		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
+		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+		RemoveRecent(fName);
+
+	}
+	changedSinceSave = false;
+}
+
 void MolFlow::ProcessMessage(GLComponent *src, int message)
 {
 
-	if (ProcessMessage_shared(src, message)) return; //Already processed by common interface
-
+	if (ProcessMessage_shared(src, message))
+	{
+		int test = 0;
+		return;
+	} //Already processed by common interface
 	Geometry *geom = worker.GetGeometry();
 	switch (message) {
 

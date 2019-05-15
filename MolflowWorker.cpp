@@ -1043,7 +1043,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	GLProgress *progressDlg = new GLProgress("Performing preliminary calculations on geometry...", "Passing Geometry to workers");
 	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
-	
+
 	//Do preliminary calculations
 	try {
 		PrepareToRun();
@@ -1853,3 +1853,49 @@ void Worker::ImportHitBuffer(char *fileName)
 	}
 }
 
+void Worker::ImportLoadBuffer(char *fileName)
+{
+	char CWD[MAX_PATH];
+	_getcwd(CWD, MAX_PATH);
+	std::string ext = FileUtils::GetExtension(fileName);
+	if (ext != "")
+		throw Error("ImportLoadBuffer(): Wrong file extension.");
+	std::ifstream f(fileName, std::ifstream::binary);
+
+	if (f) {
+		int test = 0;
+		// get length of file:
+		f.seekg(0, f.end);
+		int length = f.tellg();
+		f.seekg(0, f.beg);
+		char *charbuffer = new char[length];
+		f.read(charbuffer, length);
+		// Block loadbuffer
+	
+		BYTE* buffer;
+		std::string inputString(length,NULL);
+		buffer = (BYTE*)charbuffer;
+		std::copy(buffer, buffer + length, inputString.begin());
+		std::stringstream inputStream;
+		inputStream << inputString;
+		cereal::BinaryInputArchive inputarchive(inputStream);
+
+		//Worker params
+		inputarchive(wp);
+		inputarchive(ontheflyParams);
+		inputarchive(CDFs);
+		inputarchive(IDs);
+		inputarchive(parameters);
+		inputarchive(temperatures);
+		inputarchive(moments);
+		inputarchive(desorptionParameterIDs);
+
+		geom->ImportFromLoader(inputarchive);
+
+	//inputarchive goes out of scope, file released
+
+		buffer = NULL;
+		SAFE_DELETE(charbuffer);
+		//Update(mApp->m_fTime);
+	}
+}

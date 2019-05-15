@@ -284,6 +284,89 @@ void MolflowGeometry::SerializeForLoader(cereal::BinaryOutputArchive& outputArch
 	}
 }
 
+#include "GLApp/GLApp.h"
+#include "GLApp/GLMessageBox.h"
+void MolflowGeometry::ImportFromLoader(cereal::BinaryInputArchive& inputarchive) {
+
+	//Geometry
+	inputarchive(sh);
+	inputarchive(vertices3);
+	
+	//char tmp[256];
+	//sprintf(tmp, "%i %i", sh.nbFacet, sh.nbSuper);
+	//bool ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+
+	
+	//Facets
+	//if(facets!=NULL){delete facets;}
+	facets = new Facet*;
+	
+		for (size_t i = 0; i < sh.nbFacet; i++) { //Necessary because facets is not (yet) a vector in the interface
+			Facet *f = new Facet();
+			
+			inputarchive(f->sh);
+
+			//f->indices.resize(f->sh.nbIndex);                    // Ref to Geometry Vector3d
+			//f->vertices2.resize(f->sh.nbIndex);
+			//f->visible.resize(f->sh.nbIndex);
+
+			std::vector<double> outgMapVector(f->sh.useOutgassingFile ? f->sh.outgassingMapWidth*f->sh.outgassingMapHeight : 0);
+			std::vector<double> textIncVector;
+
+			inputarchive(
+				f->indices,
+				f->vertices2,
+				outgMapVector,
+				textIncVector
+			);
+
+			//Some initialization
+			//if (facets != NULL) { facets[i]->~Facet(); }
+			facets[i] = new Facet(f->sh.nbIndex);
+			*facets[i] = *f;
+			f->~Facet();
+
+
+			memcpy(facets[i]->outgassingMap, outgMapVector.data(), sizeof(double)*(facets[i]->sh.useOutgassingFile ? facets[i]->sh.outgassingMapWidth*facets[i]->sh.outgassingMapHeight : 0));
+
+
+		}
+
+	/*
+	for (size_t i = 0; i < sh.nbFacet; i++) { //Necessary because facets is not (yet) a vector in the interface
+		facets[i] = new Facet();
+		inputarchive(
+			facets[i]->sh
+		);
+
+		int nbI = facets[i]->sh.nbIndex;
+
+		char tmp[256];
+		sprintf(tmp, "%i %i", i,nbI);
+		bool ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+
+		facets[i]->sh.nbIndex = nbI;
+		facets[i]->indices.resize(nbI);                    // Ref to Geometry Vector3d
+		facets[i]->vertices2.resize(nbI);
+		facets[i]->visible.resize(nbI);
+
+		std::vector<double> outgMapVector(facets[i]->sh.useOutgassingFile ? facets[i]->sh.outgassingMapWidth*facets[i]->sh.outgassingMapHeight : 0);
+
+		inputarchive(
+			facets[i]->indices,
+			facets[i]->vertices2,
+			outgMapVector
+			//facets[i]->outgassingMap//,
+			//f.textureCellIncrements
+		);
+
+
+		memcpy(facets[i]->outgassingMap, outgMapVector.data(), sizeof(double)*(facets[i]->sh.useOutgassingFile ? facets[i]->sh.outgassingMapWidth*facets[i]->sh.outgassingMapHeight : 0));
+		
+	}*/
+
+}
+
 size_t MolflowGeometry::GetHitsSize(std::vector<double> *moments) {
 
 	// Compute number of bytes allocated
