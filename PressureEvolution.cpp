@@ -220,14 +220,14 @@ void PressureEvolution::refreshChart() {
 			
 			switch (yScaleMode) {
 			case 0: { //MC Hits
-				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)100000); m++) { //max 100000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 					v->Add(worker->moments[m - 1], (double)facetHits->hit.nbMCHit, false);
 				}
 				break;
 			}
 			case 1: { //Equiv Hits
-				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)100000); m++) { //max 100000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 					v->Add(worker->moments[m - 1], facetHits->hit.nbHitEquiv, false);
 				}
@@ -237,7 +237,7 @@ void PressureEvolution::refreshChart() {
 				scaleY = 1.0 / nbDes / (f->sh.area / 1E-4)* worker->wp.gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
 				scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
 				if (f->sh.is2sided) scaleY *= 0.5;
-				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)100000); m++) { //max 100000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 					v->Add(worker->moments[m - 1], facetHits->hit.sum_v_ort*scaleY, false);
 				}
@@ -247,7 +247,7 @@ void PressureEvolution::refreshChart() {
 				scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
 				scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
 				scaleY *= f->DensityCorrection();
-				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)100000); m++) { //max 100000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 					v->Add(worker->moments[m - 1], facetHits->hit.sum_1_per_ort_velocity*scaleY, false);
 				}
@@ -256,7 +256,7 @@ void PressureEvolution::refreshChart() {
 			case 4: {//Imp.rate
 				scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
 				scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
-				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)100000); m++) { //max 100000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 					v->Add(worker->moments[m - 1], facetHits->hit.nbHitEquiv*scaleY, false);
 				}
@@ -285,8 +285,8 @@ void PressureEvolution::addView(size_t facetId) {
 			GLMessageBox::Display("Facet already on chart", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
-		if (worker->moments.size() > 10000) {
-			GLMessageBox::Display("Only the first 10000 moments will be plotted", "Error", GLDLG_OK, GLDLG_ICONWARNING);
+		if (worker->moments.size() > 100000) {
+			GLMessageBox::Display("Only the first 100000 moments will be plotted", "Error", GLDLG_OK, GLDLG_ICONWARNING);
 		}
 	}
 
