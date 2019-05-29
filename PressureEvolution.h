@@ -25,6 +25,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 class GLChart;
 class GLLabel;
 class GLCombo;
+class GLList;
+class GLTitledPanel;
 class GLButton;
 class GLDataView;
 class GLToggle;
@@ -32,6 +34,8 @@ class GLTextField;
 class Worker;
 class Geometry;
 
+
+//static const char *colPENames[] = { "Moment","MC Hits","Equiv. hits","Pressure (mbar)","Density (1/m3)","Imp.rate (1/s/m2)" };
 
 class PressureEvolution : public GLWindow {
 
@@ -54,16 +58,24 @@ private:
   void addView(size_t facetId);
   void remView(size_t viewId);
   void refreshChart();
+  void refreshTable();
+
+  size_t nb_Facets;
 
   Worker      *worker;
 
   GLChart     *chart;
+  GLList      *historyList;
   GLLabel *label1, *normLabel;
+  GLTitledPanel *panelGraph;
+  GLTitledPanel *panelTable;
 
 
   GLCombo     *profCombo;
   GLCombo     *yScaleCombo;
   GLButton    *selButton;
+  GLButton    *exportButton;
+  GLButton    *refreshButton;
   GLButton    *addButton;
   GLButton    *removeButton;
   GLButton    *removeAllButton;

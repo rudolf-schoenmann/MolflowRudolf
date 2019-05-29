@@ -29,6 +29,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLButton.h"
 #include "GLApp/GLParser.h"
 #include "GLApp/GLTextField.h"
+#include "GLApp/GLTitledPanel.h"
 #include "Geometry_shared.h"
 #include "Facet_shared.h"
 #include <math.h>
@@ -54,7 +55,7 @@ extern const char*profType[];
 PressureEvolution::PressureEvolution(Worker *w) :GLWindow() {
 
 	int wD = 750;
-	int hD = 375;
+	int hD = 800;//375;
 
 	SetTitle("Pressure evolution plotter");
 	SetIconfiable(true);
@@ -71,6 +72,12 @@ PressureEvolution::PressureEvolution(Worker *w) :GLWindow() {
 		GLColor(255,230,005)  //yellow
 	};
 
+	panelGraph = new GLTitledPanel("Graph");
+	Add(panelGraph);
+
+	panelTable = new GLTitledPanel("Table");
+	Add(panelTable);
+
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
 	chart->GetY1Axis()->SetGridVisible(true);
@@ -80,7 +87,19 @@ PressureEvolution::PressureEvolution(Worker *w) :GLWindow() {
 	chart->GetY2Axis()->SetAutoScale(true);
 	chart->GetY1Axis()->SetAnnotation(VALUE_ANNO);
 	chart->GetXAxis()->SetAnnotation(VALUE_ANNO);
-	Add(chart);
+	panelGraph->Add(chart);
+	historyList = new GLList(0);
+	historyList->SetHScrollVisible(false);
+	historyList->SetSize(0,0);
+	historyList->SetColumnLabelVisible(true);
+	historyList->SetSelectionMode(1);
+	panelTable->Add(historyList);
+	
+	exportButton = new GLButton(0, "Export Table");
+	panelTable->Add(exportButton);
+	refreshButton = new GLButton(0, "Refresh");
+
+	panelTable->Add(refreshButton);
 
 	selButton = new GLButton(0, "<-Show Facet");
 	Add(selButton);
@@ -129,13 +148,29 @@ PressureEvolution::PressureEvolution(Worker *w) :GLWindow() {
 	RestoreDeviceObjects();
 
 	worker = w;
+
+	Geometry *geom = worker->GetGeometry();
+	nb_Facets = geom->GetNbFacet();
 	Refresh();
 
 }
 
 void PressureEvolution::SetBounds(int x, int y, int w, int h) {
 
-	chart->SetBounds(7, 5, w - 15, h - 60);
+	int mid = (h - 60) / 2;
+	int offset = 80;
+
+	panelGraph->SetBounds(5, 10, w - 10, mid+offset);
+	panelTable->SetBounds(5, mid+10+offset, w - 10, mid-offset);
+
+	panelGraph->SetCompBounds(chart, 10, 20, w-30, mid-30+offset);
+
+	panelTable->SetCompBounds(historyList, 10, 20, w-30, mid-50-offset);
+	panelTable->SetCompBounds(exportButton, 10, mid-offset-23, 80, 19);
+	panelTable->SetCompBounds(refreshButton, 100, mid - offset - 23, 60, 19);
+
+	historyList->SetColumnWidthForAll((w - 40) / (nb_Facets+1));
+
 	profCombo->SetBounds(7, h - 45, 117, 19);
 	selButton->SetBounds(130, h - 45, 80, 19);
 	removeButton->SetBounds(215, h - 45, 60, 19);
@@ -197,9 +232,105 @@ void PressureEvolution::Update(float appTime, bool force) {
 	}
 
 }
+void PressureEvolution::refreshTable() {
+
+	// Lock during update
+	BYTE *buffer = worker->GetHits();
+	int yScaleMode = yScaleCombo->GetSelectedIndex();
+	if (!buffer) return;
+
+	Geometry *geom = worker->GetGeometry();
+	nb_Facets = geom->GetNbFacet();
+	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
+	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
+	double scaleY;
+	size_t facetHitsSize = (1 + worker->moments.size()) * sizeof(FacetHitBuffer);
+
+	size_t numMomentsNow = Min(worker->moments.size(), (size_t)10000);
+
+	historyList->SetSize(nb_Facets + 1, numMomentsNow);
+	historyList->SetColumnLabels();
+	historyList->SetColumnWidthForAll((this->width - 40) / (nb_Facets + 1));
+
+	char tmp[256];
+	for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+		sprintf(tmp, "%g", (double)worker->moments[m - 1]);
+		historyList->SetValueAt(0,m - 1, tmp);
+	}
+
+	for (int i = 0;i < nb_Facets;i++) {
+		Facet *f = geom->GetFacet(i);
+		switch (yScaleMode) {
+		case 0: { //MC Hits
+			panelTable->SetTitle("Table - MC Hits");
+			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+				sprintf(tmp, "%g", (double)facetHits->hit.nbMCHit);
+				historyList->SetValueAt(i + 1, m - 1, tmp);
+			}
+			break;
+		}
+		case 1: { //Equiv Hits
+			panelTable->SetTitle("Table - Equiv. Hits");
+			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+				sprintf(tmp, "%g", facetHits->hit.nbHitEquiv);
+				historyList->SetValueAt(i + 1, m - 1, tmp);
+			}
+			break;
+		}
+		case 2: {//Pressure
+			panelTable->SetTitle("Table - Pressure (mbar)");
+			scaleY = 1.0 / nbDes / (f->sh.area / 1E-4)* worker->wp.gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
+			scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
+			if (f->sh.is2sided) scaleY *= 0.5;
+			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+				sprintf(tmp, "%g", facetHits->hit.sum_v_ort*scaleY);
+				historyList->SetValueAt(i + 1, m - 1, tmp);
+			}
+			break;
+		}
+		case 3: {//Particle density
+			panelTable->SetTitle("Table - Density (1/m3)");
+			scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
+			scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
+			scaleY *= f->DensityCorrection();
+			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+				
+				sprintf(tmp, "%g", facetHits->hit.sum_1_per_ort_velocity*scaleY);
+				historyList->SetValueAt(i + 1, m - 1, tmp);
+			}
+			break;
+		}
+		case 4: {//Imp.rate
+			panelTable->SetTitle("Table - Imp.rate (1/s/m2)");
+			scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
+			scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
+			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+				sprintf(tmp, "%g", facetHits->hit.nbHitEquiv*scaleY);
+				historyList->SetValueAt(i + 1, m - 1, tmp);
+			}
+			break;
+		}
+		}
+		
+	}
+}
 
 void PressureEvolution::refreshChart() {
 	//refreshes chart values
+	refreshTable();
 
 	// Lock during update
 	BYTE *buffer = worker->GetHits();
@@ -211,6 +342,7 @@ void PressureEvolution::refreshChart() {
 	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
 	double scaleY;
 	size_t facetHitsSize = (1 + worker->moments.size()) * sizeof(FacetHitBuffer);
+
 
 	for (auto& v : views) {
 
@@ -355,6 +487,12 @@ void PressureEvolution::ProcessMessage(GLComponent *src, int message) {
 		}
 		else if (src == removeAllButton) {
 			Reset();
+		}
+		else if (src == refreshButton) {
+			Refresh();
+		}
+		else if (src == exportButton) {
+
 		}
 		break;
 	case MSG_COMBO:
