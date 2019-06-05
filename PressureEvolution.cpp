@@ -30,9 +30,12 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLParser.h"
 #include "GLApp/GLTextField.h"
 #include "GLApp/GLTitledPanel.h"
+#include "GLApp/GLFileBox.h"
 #include "Geometry_shared.h"
-#include "Facet_shared.h"
 #include <math.h>
+
+#include <fstream>
+#include <iomanip>
 
 #ifdef MOLFLOW
 #include "MolFlow.h"
@@ -89,7 +92,7 @@ PressureEvolution::PressureEvolution(Worker *w) :GLWindow() {
 	chart->GetXAxis()->SetAnnotation(VALUE_ANNO);
 	panelGraph->Add(chart);
 	historyList = new GLList(0);
-	historyList->SetHScrollVisible(false);
+	historyList->SetHScrollVisible(true);
 	historyList->SetSize(0,0);
 	historyList->SetColumnLabelVisible(true);
 	historyList->SetSelectionMode(1);
@@ -98,8 +101,10 @@ PressureEvolution::PressureEvolution(Worker *w) :GLWindow() {
 	exportButton = new GLButton(0, "Export Table");
 	panelTable->Add(exportButton);
 	refreshButton = new GLButton(0, "Refresh");
-
 	panelTable->Add(refreshButton);
+	onlyViewsButton = new GLButton(0, "Show only selected facets");
+	panelTable->Add(onlyViewsButton);
+	onlyViews = false;
 
 	selButton = new GLButton(0, "<-Show Facet");
 	Add(selButton);
@@ -168,8 +173,9 @@ void PressureEvolution::SetBounds(int x, int y, int w, int h) {
 	panelTable->SetCompBounds(historyList, 10, 20, w-30, mid-50-offset);
 	panelTable->SetCompBounds(exportButton, 10, mid-offset-23, 80, 19);
 	panelTable->SetCompBounds(refreshButton, 100, mid - offset - 23, 60, 19);
+	panelTable->SetCompBounds(onlyViewsButton, 170, mid - offset - 23, 150, 19);
 
-	historyList->SetColumnWidthForAll((w - 40) / (nb_Facets+1));
+	//historyList->SetColumnWidthForAll((w - 40) / (nb_Facets+1));
 
 	profCombo->SetBounds(7, h - 45, 117, 19);
 	selButton->SetBounds(130, h - 45, 80, 19);
@@ -232,100 +238,233 @@ void PressureEvolution::Update(float appTime, bool force) {
 	}
 
 }
+
+void PressureEvolution::exportList() {
+	FILENAME *fn = GLFileBox::SaveFile(mApp->currentDir, NULL, "Save File", "All files\0*.*\0", 0);
+
+	if (fn) {
+		try {
+			char tmp[512];
+			char *fileName = fn->fullName;
+
+			std::ofstream f;
+			char *ext, *dir;
+			dir = strrchr(fileName, '\\');
+			ext = strrchr(fileName, '.');
+			ext++;
+
+			bool ok = true;
+			if (FileUtils::Exist(fileName)) {
+				sprintf(tmp, "Overwrite existing file ?\n%s", fileName);
+				ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+			}
+			
+			if (ok) {
+				f.open(fileName, std::ofstream::out | std::ios::trunc);
+				if (!f) {
+					char tmp[256];
+					sprintf(tmp, "Cannot open file for writing %s", fileName);
+					throw Error(tmp);
+				}
+
+				int numCol = historyList->GetNbColumn();
+				int numWidth = 20;
+
+				int yScaleMode = yScaleCombo->GetSelectedIndex();
+				switch (yScaleMode) {
+				case 0: { //MC Hits
+					f <<"Table - MC Hits\n";
+
+					break;
+				}
+				case 1: { //Equiv Hits
+					f<<"Table - Equiv. Hits\n";
+
+					break;
+				}
+				case 2: {//Pressure
+					f<<"Table - Pressure (mbar)\n";
+
+					break;
+				}
+				case 3: {//Particle density
+					f<<"Table - Density (1/m3)\n";
+					break;
+				}
+				case 4: {//Imp.rate
+					f<<"Table - Imp.rate (1/s/m2)\n";
+					break;
+				}
+				}
+
+				for (int row = 0;row < historyList->GetNbRow();row++)
+				{
+					if (row == 0) {
+						for (int col = 0; col < numCol;col++) {
+							if (col == 0) {
+								f << left << setw(10) << historyList->getColumnLabel(col) <<'\t';
+							}
+							else{
+								f << left << setw(numWidth) << historyList->getColumnLabel(col);
+								if (col == numCol - 1) { f << '\n'; }
+								else { f << "\t"; }
+							}
+						}
+					}
+					for (int col = 0; col < numCol;col++) {
+						if (col == 0) {
+							f << left << setw(10) << historyList->GetValueAt(col, row) << '\t';
+						}
+						else {
+							f << left << setw(numWidth) << historyList->GetValueAt(col, row);
+							if (col == numCol - 1) { f << '\n'; }
+							else { f << "\t"; }
+						}
+					}
+				}
+
+				f.close();
+			}
+
+		}
+		catch (Error &e) {
+			char errMsg[512];
+			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fn->fullName);
+			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+		}
+	}
+}
+
+void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
+	char tmp[256];
+	int yScaleMode = yScaleCombo->GetSelectedIndex();
+	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
+	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
+	double scaleY;
+	
+	switch (yScaleMode) {
+	case 0: { //MC Hits
+		panelTable->SetTitle("Table - MC Hits");
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+			sprintf(tmp, "%g", (double)facetHits->hit.nbMCHit);
+			historyList->SetValueAt(colnum + 1, m - 1, tmp);
+		}
+		break;
+	}
+	case 1: { //Equiv Hits
+		panelTable->SetTitle("Table - Equiv. Hits");
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+			sprintf(tmp, "%g", facetHits->hit.nbHitEquiv);
+			historyList->SetValueAt(colnum + 1, m - 1, tmp);
+		}
+		break;
+	}
+	case 2: {//Pressure
+		panelTable->SetTitle("Table - Pressure (mbar)");
+		scaleY = 1.0 / nbDes / (f->sh.area * 1E-4)* worker->wp.gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
+		scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
+		if (f->sh.is2sided) scaleY *= 0.5;
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+			sprintf(tmp, "%g", facetHits->hit.sum_v_ort*scaleY);
+			historyList->SetValueAt(colnum + 1, m - 1, tmp);
+		}
+		break;
+	}
+	case 3: {//Particle density
+		panelTable->SetTitle("Table - Density (1/m3)");
+		scaleY = 1.0 / nbDes / (f->GetArea() * 1E-4);
+		scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
+		scaleY *= f->DensityCorrection();
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+			sprintf(tmp, "%g", facetHits->hit.sum_1_per_ort_velocity*scaleY);
+			historyList->SetValueAt(colnum + 1, m - 1, tmp);
+		}
+		break;
+	}
+	case 4: {//Imp.rate
+		panelTable->SetTitle("Table - Imp.rate (1/s/m2)");
+		scaleY = 1.0 / nbDes / (f->GetArea() * 1E-4);
+		scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+
+
+			sprintf(tmp, "%g", facetHits->hit.nbHitEquiv*scaleY);
+			historyList->SetValueAt(colnum + 1, m - 1, tmp);
+		}
+		break;
+	}
+	}
+}
+
 void PressureEvolution::refreshTable() {
 
 	// Lock during update
 	BYTE *buffer = worker->GetHits();
-	int yScaleMode = yScaleCombo->GetSelectedIndex();
+
 	if (!buffer) return;
 
 	Geometry *geom = worker->GetGeometry();
-	nb_Facets = geom->GetNbFacet();
-	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
-	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
-	double scaleY;
-	size_t facetHitsSize = (1 + worker->moments.size()) * sizeof(FacetHitBuffer);
+
 
 	size_t numMomentsNow = Min(worker->moments.size(), (size_t)10000);
 
-	historyList->SetSize(nb_Facets + 1, numMomentsNow);
-	historyList->SetColumnLabels();
-	historyList->SetColumnWidthForAll((this->width - 40) / (nb_Facets + 1));
-
 	char tmp[256];
-	for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
-		sprintf(tmp, "%g", (double)worker->moments[m - 1]);
-		historyList->SetValueAt(0,m - 1, tmp);
+	if (onlyViews) {
+		historyList->SetSize(views.size() + 1, numMomentsNow);
+		historyList->SetColumnLabels();
+
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			sprintf(tmp, "%g", (double)worker->moments[m - 1]);
+			historyList->SetValueAt(0, m - 1, tmp);
+		}
+
+		int viewnum = 0;
+		for (auto& v : views) {
+
+			if (v->userData1 >= 0 && v->userData1 < geom->GetNbFacet()) {
+				Facet *f = geom->GetFacet(v->userData1);
+				updateList(buffer, f, viewnum);
+				historyList->SetColumnLabel(viewnum+1, v->userData1+1);
+			}
+			viewnum += 1;
+		}
 	}
-
-	for (int i = 0;i < nb_Facets;i++) {
-		Facet *f = geom->GetFacet(i);
-		switch (yScaleMode) {
-		case 0: { //MC Hits
-			panelTable->SetTitle("Table - MC Hits");
-			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
-				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+	else {
+		nb_Facets = geom->GetNbFacet();
+		historyList->SetSize(nb_Facets + 1, numMomentsNow);
+		historyList->SetColumnLabels();
+		//historyList->SetColumnWidthForAll((this->width - 40) / (nb_Facets + 1));
 
 
-				sprintf(tmp, "%g", (double)facetHits->hit.nbMCHit);
-				historyList->SetValueAt(i + 1, m - 1, tmp);
+		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
+			sprintf(tmp, "%g", (double)worker->moments[m - 1]);
+			historyList->SetValueAt(0, m - 1, tmp);
+			for (auto& v : views) {
+
 			}
-			break;
 		}
-		case 1: { //Equiv Hits
-			panelTable->SetTitle("Table - Equiv. Hits");
-			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
-				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
-				sprintf(tmp, "%g", facetHits->hit.nbHitEquiv);
-				historyList->SetValueAt(i + 1, m - 1, tmp);
-			}
-			break;
+		for (int i = 0;i < nb_Facets;i++) {
+			Facet *f = geom->GetFacet(i);
+			updateList(buffer, f, i);
+
 		}
-		case 2: {//Pressure
-			panelTable->SetTitle("Table - Pressure (mbar)");
-			scaleY = 1.0 / nbDes / (f->sh.area * 1E-4)* worker->wp.gasMass / 1000 / 6E23 * 0.0100; //0.01: Pa->mbar
-			scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
-			if (f->sh.is2sided) scaleY *= 0.5;
-			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
-				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-
-
-				sprintf(tmp, "%g", facetHits->hit.sum_v_ort*scaleY);
-				historyList->SetValueAt(i + 1, m - 1, tmp);
-			}
-			break;
-		}
-		case 3: {//Particle density
-			panelTable->SetTitle("Table - Density (1/m3)");
-			scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
-			scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
-			scaleY *= f->DensityCorrection();
-			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
-				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-
-				
-				sprintf(tmp, "%g", facetHits->hit.sum_1_per_ort_velocity*scaleY);
-				historyList->SetValueAt(i + 1, m - 1, tmp);
-			}
-			break;
-		}
-		case 4: {//Imp.rate
-			panelTable->SetTitle("Table - Imp.rate (1/s/m2)");
-			scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
-			scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
-			for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
-				FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-
-
-				sprintf(tmp, "%g", facetHits->hit.nbHitEquiv*scaleY);
-				historyList->SetValueAt(i + 1, m - 1, tmp);
-			}
-			break;
-		}
-		}
-		
 	}
+	historyList->SetColumnWidthForAll(90);
+	historyList->SetColumnWidth(0, 60);
+	worker->ReleaseHits();
 }
 
 void PressureEvolution::refreshChart() {
@@ -342,7 +481,6 @@ void PressureEvolution::refreshChart() {
 	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
 	double scaleY;
 	size_t facetHitsSize = (1 + worker->moments.size()) * sizeof(FacetHitBuffer);
-
 
 	for (auto& v : views) {
 
@@ -376,7 +514,7 @@ void PressureEvolution::refreshChart() {
 				break;
 			}
 			case 3: {//Particle density
-				scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
+				scaleY = 1.0 / nbDes / (f->GetArea() * 1E-4);
 				scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
 				scaleY *= f->DensityCorrection();
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
@@ -386,7 +524,7 @@ void PressureEvolution::refreshChart() {
 				break;
 			}
 			case 4: {//Imp.rate
-				scaleY = 1.0 / nbDes / (f->GetArea() / 1E-4);
+				scaleY = 1.0 / nbDes / (f->GetArea() * 1E-4);
 				scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
@@ -492,7 +630,18 @@ void PressureEvolution::ProcessMessage(GLComponent *src, int message) {
 			Refresh();
 		}
 		else if (src == exportButton) {
-
+			exportList();
+		}
+		else if (src == onlyViewsButton) {
+			if (onlyViews == true) {
+				onlyViews = false;
+				onlyViewsButton->SetText("Show only selected facets");
+			}
+			else {
+				onlyViews = true;
+				onlyViewsButton->SetText("Show all facets");
+			}
+			refreshTable();
 		}
 		break;
 	case MSG_COMBO:

@@ -22,6 +22,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include <vector>
 #include "GLApp/GLWindow.h"
 #include "GLApp/GLChart/GLChartConst.h"
+#include "Facet_shared.h"
+
 class GLChart;
 class GLLabel;
 class GLCombo;
@@ -59,6 +61,8 @@ private:
   void remView(size_t viewId);
   void refreshChart();
   void refreshTable();
+  void updateList(BYTE *buffer, Facet *f, int colnum);
+  void exportList();
 
   size_t nb_Facets;
 
@@ -74,11 +78,16 @@ private:
   GLCombo     *profCombo;
   GLCombo     *yScaleCombo;
   GLButton    *selButton;
-  GLButton    *exportButton;
-  GLButton    *refreshButton;
+
   GLButton    *addButton;
   GLButton    *removeButton;
   GLButton    *removeAllButton;
+
+  GLButton    *exportButton;
+  GLButton    *refreshButton;
+  GLButton    *onlyViewsButton;
+  bool        onlyViews;
+
 
   GLToggle *logXToggle,*logYToggle;
 
