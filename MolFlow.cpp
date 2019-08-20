@@ -1,9 +1,9 @@
 /*
-Program:     MolFlow+ / Synrad+
-Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
-Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
-Copyright:   E.S.R.F / CERN
-Website:     https://cern.ch/molflow
+Program:     ContaminationFlow
+Description: Monte Carlo simulator for satellite contanimation studies
+Authors:     Rudolf Schönmann / Hoai My Van
+Copyright:   TU Munich
+Forked from: Molflow (CERN) (https://cern.ch/molflow)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -85,7 +85,8 @@ const char *fileSFilters = "MolFlow saveable files\0*.xml;*.zip;*.geo;*.geo7z;*.
 static const char *fileDesFilters = "Desorption files\0*.des\0All files\0*.*\0";
 
 int cSize = 4;
-int   cWidth[] = { 30, 56, 50, 50 };
+int offset_width = 16;
+int   cWidth[] = { 30+offset_width, 56, 50, 50 };
 char *cName[] = { "#", "Hits", "Des", "Abs" };
 
 #ifdef _DEBUG
@@ -458,25 +459,26 @@ int MolFlow::OneTimeSceneInit()
 	facetUseDesFile->SetValueAt(0,"No desorption map");
 	inputPanel->Add(facetUseDesFile);*/
 
-	outputPanel = new GLTitledPanel("Particles out");
+	outputPanel = new GLTitledPanel("Contamination Level");
 	facetPanel->Add(outputPanel);
-
+	/*
 	facetSLabel = new GLLabel("Sticking factor:");
 	outputPanel->Add(facetSLabel);
 	facetSticking = new GLTextField(0, NULL);
-	outputPanel->Add(facetSticking);
+	outputPanel->Add(facetSticking);*/
 
+	/*
 	facetPumpingLabel = new GLLabel("Pumping Speed (l/s):");
 	outputPanel->Add(facetPumpingLabel);
 	facetPumping = new GLTextField(0, NULL);
-	outputPanel->Add(facetPumping);
+	outputPanel->Add(facetPumping);*/
 	
-	facetcoverageLabel = new GLLabel("Coverage:");
+	facetcoverageLabel = new GLLabel("Coverage [co2 eq./monolayer]:");
 	outputPanel->Add(facetcoverageLabel);
 	facetcoverage = new GLTextField(0, NULL); //can probably be optimized in functions below
 	outputPanel->Add(facetcoverage);
 
-	facetcoveringLabel = new GLLabel("Covering:");
+	facetcoveringLabel = new GLLabel("Covering [co2 eq. particles]:");
 	outputPanel->Add(facetcoveringLabel);
 	facetcovering = new GLTextField(0, NULL);
 	outputPanel->Add(facetcovering);
@@ -541,127 +543,129 @@ int MolFlow::OneTimeSceneInit()
 
 void MolFlow::PlaceComponents() {
 
-	int sx = m_screenWidth - 205;
+
+	int sx = m_screenWidth - 205-offset_width;
 	int sy = 30;
+
+	
 
 	Place3DViewer();
 
-	geomNumber->SetBounds(sx, 3, 202, 18);
+	geomNumber->SetBounds(sx, 3, 202+offset_width, 18);
 
 	// Viewer settings ----------------------------------------
-	togglePanel->SetBounds(sx, sy, 202, 112);
+	togglePanel->SetBounds(sx, sy, 202+ offset_width, 112);
 
 	togglePanel->SetCompBounds(showRule, 5, 20, 60, 18);
-	togglePanel->SetCompBounds(showNormal, 70, 20, 60, 18);
-	togglePanel->SetCompBounds(showUV, 135, 20, 60, 18);
+	togglePanel->SetCompBounds(showNormal, 70+int(offset_width/2), 20, 60, 18);
+	togglePanel->SetCompBounds(showUV, 135 + offset_width, 20, 60, 18);
 
 	togglePanel->SetCompBounds(showLine, 5, 42, 60, 18);
-	togglePanel->SetCompBounds(showLeak, 70, 42, 60, 18);
-	togglePanel->SetCompBounds(showHit, 135, 42, 60, 18);
+	togglePanel->SetCompBounds(showLeak, 70 + int(offset_width / 2), 42, 60, 18);
+	togglePanel->SetCompBounds(showHit, 135 + offset_width, 42, 60, 18);
 
 	togglePanel->SetCompBounds(showVolume, 5, 64, 60, 18);
-	togglePanel->SetCompBounds(showTexture, 70, 64, 60, 18);
-	togglePanel->SetCompBounds(showFilter, 135, 64, 60, 18);
+	togglePanel->SetCompBounds(showTexture, 70 + int(offset_width / 2), 64, 60, 18);
+	togglePanel->SetCompBounds(showFilter, 135 + offset_width, 64, 60, 18);
 
 	togglePanel->SetCompBounds(viewerMoreButton, 5, 86, 55, 18);
-	togglePanel->SetCompBounds(showVertex, 70, 86, 60, 18);
-	togglePanel->SetCompBounds(showIndex, 137, 86, 60, 18);
+	togglePanel->SetCompBounds(showVertex, 70 + int(offset_width / 2), 86, 60, 18);
+	togglePanel->SetCompBounds(showIndex, 135 + offset_width, 86, 60, 18);
 
 	sy += (togglePanel->GetHeight() + 5);
 
 	// Selected facet -----------------------------------------
-	int offset_GUI = 25+25;
-	int offset_GUI1 = 25;
-	facetPanel->SetBounds(sx, sy, 202, 330 + offset_GUI+ offset_GUI1);
+	int offset_output = 0;
+	int offset_input = 25;
+	facetPanel->SetBounds(sx, sy, 202+ offset_width, 330 + offset_output + offset_input);
 
-	facetPanel->SetCompBounds(inputPanel, 5, 16, 192, 90 + offset_GUI1);
+	facetPanel->SetCompBounds(inputPanel, 5, 16, 192+ offset_width, 90 + offset_input);
 
 	int cursorY = 15;
 	inputPanel->SetCompBounds(facetDLabel, 5, cursorY, 60, 18);
-	inputPanel->SetCompBounds(facetDesType, 65, cursorY, 80, 18);
-	inputPanel->SetCompBounds(facetDesTypeN, 150, cursorY, 30, 18);
+	inputPanel->SetCompBounds(facetDesType, 65 + int(offset_width / 2), cursorY, 80, 18);
+	inputPanel->SetCompBounds(facetDesTypeN, 150 + offset_width, cursorY, 30, 18);
 
 	inputPanel->SetCompBounds(facetFILabel, 5, cursorY += 25, 110, 18);
-	inputPanel->SetCompBounds(facetFlow, 140, cursorY, 45, 18);
+	inputPanel->SetCompBounds(facetFlow, 140 + offset_width, cursorY, 45, 18);
 
 	inputPanel->SetCompBounds(facetFIAreaLabel, 5, cursorY += 25, 110, 18);
-	inputPanel->SetCompBounds(facetFlowArea, 140, cursorY, 45, 18);
+	inputPanel->SetCompBounds(facetFlowArea, 140 + offset_width, cursorY, 45, 18);
 
 	inputPanel->SetCompBounds(facetDesRateLabel, 5, cursorY += 25, 110, 18);
-	inputPanel->SetCompBounds(facetDesRate, 140, cursorY, 45, 18);
+	inputPanel->SetCompBounds(facetDesRate, 140 + offset_width, cursorY, 45, 18);
 
 	//inputPanel->SetCompBounds(facetUseDesFileLabel,5,90,60,18);
 	//inputPanel->SetCompBounds(facetUseDesFile,65,90,120,18);
 
 	
 	//facetPanel->SetCompBounds(outputPanel, 5, cursorY += 45, 192, 65);
-	facetPanel->SetCompBounds(outputPanel, 5, cursorY += 45, 192, 65 + offset_GUI);
+	facetPanel->SetCompBounds(outputPanel, 5, cursorY += 45, 192 + offset_width, 65 + offset_output);
 
-	outputPanel->SetCompBounds(facetSLabel, 7, cursorY = 15, 100, 18);
-	outputPanel->SetCompBounds(facetSticking, 140, cursorY, 45, 18);
-
-	outputPanel->SetCompBounds(facetPumpingLabel, 7, cursorY += 25, 100, 18);
-	outputPanel->SetCompBounds(facetPumping, 140, cursorY, 45, 18);
-
-	outputPanel->SetCompBounds(facetcoverageLabel, 7, cursorY += 25, 100, 18);
-	outputPanel->SetCompBounds(facetcoverage, 140, cursorY, 45, 18);
+	/*outputPanel->SetCompBounds(facetSLabel, 7, cursorY = 15, 100, 18);
+	outputPanel->SetCompBounds(facetSticking, 140, cursorY, 45, 18);*/
+	cursorY = -10;
+	//outputPanel->SetCompBounds(facetPumpingLabel, 7, cursorY += 25, 100, 18);
+	//outputPanel->SetCompBounds(facetPumping, 140, cursorY, 45, 18);
 
 	outputPanel->SetCompBounds(facetcoveringLabel, 7, cursorY += 25, 100, 18);
-	outputPanel->SetCompBounds(facetcovering, 140, cursorY, 45, 18);
+	outputPanel->SetCompBounds(facetcovering, 140 + offset_width, cursorY, 45, 18);
 
-	facetPanel->SetCompBounds(facetSideLabel, 7, cursorY = 180 + offset_GUI+ offset_GUI1, 50, 18);
-	facetPanel->SetCompBounds(facetSideType, 65, cursorY, 130, 18);
+	outputPanel->SetCompBounds(facetcoverageLabel, 7, cursorY += 25, 100, 18);
+	outputPanel->SetCompBounds(facetcoverage, 140 + offset_width, cursorY, 45, 18);
+
+	facetPanel->SetCompBounds(facetSideLabel, 7, cursorY = 180 + offset_input+ offset_output, 50, 18);
+	facetPanel->SetCompBounds(facetSideType, 65 , cursorY, 130 + offset_width, 18);
 
 	facetPanel->SetCompBounds(facetTLabel, 7, cursorY += 25, 100, 18);
-	facetPanel->SetCompBounds(facetOpacity, 110, cursorY, 82, 18);
+	facetPanel->SetCompBounds(facetOpacity, 110 , cursorY, 82 + offset_width, 18);
 
 	facetPanel->SetCompBounds(facetTempLabel, 7, cursorY += 25, 100, 18);
-	facetPanel->SetCompBounds(facetTemperature, 110, cursorY, 82, 18);
+	facetPanel->SetCompBounds(facetTemperature, 110 , cursorY, 82 + offset_width, 18);
 
 	facetPanel->SetCompBounds(facetAreaLabel, 7, cursorY += 25, 100, 18);
-	facetPanel->SetCompBounds(facetArea, 110, cursorY, 82, 18);
+	facetPanel->SetCompBounds(facetArea, 110 , cursorY, 82 + offset_width, 18);
 
 	facetPanel->SetCompBounds(facetReLabel, 7, cursorY += 25, 60, 18);
-	facetPanel->SetCompBounds(facetRecType, 65, cursorY, 130, 18);
+	facetPanel->SetCompBounds(facetRecType, 65 , cursorY, 130 + offset_width, 18);
 
 	facetPanel->SetCompBounds(facetAdvParamsBtn, 5, cursorY += 25, 48, 18);
-	facetPanel->SetCompBounds(facetDetailsBtn, 56, cursorY, 45, 18);
-	facetPanel->SetCompBounds(facetCoordBtn, 104, cursorY, 45, 18);
-	facetPanel->SetCompBounds(facetApplyBtn, 153, cursorY, 44, 18);
+	facetPanel->SetCompBounds(facetDetailsBtn, 56+int(offset_width / 3), cursorY, 45, 18);
+	facetPanel->SetCompBounds(facetCoordBtn, 104+int(2*offset_width / 3), cursorY, 45, 18);
+	facetPanel->SetCompBounds(facetApplyBtn, 153 + offset_width, cursorY, 44, 18);
 
 	sy += facetPanel->GetHeight() + 5;
 
-	shortcutPanel->SetBounds(sx, sy, 202, 40);
-	shortcutPanel->SetCompBounds(profilePlotterBtn, 5, 15, 60, 18);
-	shortcutPanel->SetCompBounds(texturePlotterBtn, 70, 15, 60, 18);
-	shortcutPanel->SetCompBounds(textureScalingBtn, 135, 15, 60, 18);
+	shortcutPanel->SetBounds(sx, sy, 202 + offset_width, 40);
+	shortcutPanel->SetCompBounds(profilePlotterBtn, 5 , 15, 60, 18);
+	shortcutPanel->SetCompBounds(texturePlotterBtn, 70 + int(offset_width / 2), 15, 60, 18);
+	shortcutPanel->SetCompBounds(textureScalingBtn, 135 + offset_width, 15, 60, 18);
 
 	sy += shortcutPanel->GetHeight() + 5;
 
 	// Simulation ---------------------------------------------
-	simuPanel->SetBounds(sx, sy, 202, 169+50);
+	simuPanel->SetBounds(sx, sy, 202 + offset_width, 169+50);
 
 	simuPanel->SetCompBounds(globalSettingsBtn, 5, 20, 48, 19);
-	simuPanel->SetCompBounds(startSimu, 58, 20, 66, 19);
-	simuPanel->SetCompBounds(resetSimu, 128, 20, 66, 19);
+	simuPanel->SetCompBounds(startSimu, 58 + int(offset_width / 2), 20, 66, 19);
+	simuPanel->SetCompBounds(resetSimu, 128 + offset_width, 20, 66, 19);
 	//simuPanel->SetCompBounds(statusSimu,175,20,20,19);
 	simuPanel->SetCompBounds(modeLabel, 5, 45, 30, 18);
 	simuPanel->SetCompBounds(modeCombo, 40, 45, 85, 18);
 	simuPanel->SetCompBounds(compACBtn, 130, 45, 65, 19);
 	simuPanel->SetCompBounds(autoFrameMoveToggle, 5, 45, 65, 19);
-	simuPanel->SetCompBounds(forceFrameMoveButton, 128, 45, 66, 19);
+	simuPanel->SetCompBounds(forceFrameMoveButton, 128 + offset_width, 45, 66, 19);
 
 	//simuPanel->SetCompBounds(compACBtn,123,45,52,19);
 	//simuPanel->SetCompBounds(singleACBtn,178,45,20,19);
 	simuPanel->SetCompBounds(hitLabel, 5, 70, 30, 18);
-	simuPanel->SetCompBounds(hitNumber, 40, 70, 155, 18);
+	simuPanel->SetCompBounds(hitNumber, 40, 70, 155 + offset_width, 18);
 	simuPanel->SetCompBounds(desLabel, 5, 95, 30, 18);
-	simuPanel->SetCompBounds(desNumber, 40, 95, 155, 18);
+	simuPanel->SetCompBounds(desNumber, 40, 95, 155 + offset_width, 18);
 	simuPanel->SetCompBounds(leakLabel, 5, 120, 30, 18);
-	simuPanel->SetCompBounds(leakNumber, 40, 120, 155, 18);
+	simuPanel->SetCompBounds(leakNumber, 40, 120, 155 + offset_width, 18);
 	simuPanel->SetCompBounds(sTimeLabel, 5, 145, 30, 18);
-
-	simuPanel->SetCompBounds(sTime, 40, 145, 155, 18);
+	simuPanel->SetCompBounds(sTime, 40, 145, 155 + offset_width, 18);
 
 	simuPanel->SetCompBounds(historyBtn, 5, 145+50, 50, 18);
 
@@ -671,7 +675,7 @@ void MolFlow::PlaceComponents() {
 	
 	int lg = m_screenHeight -23 /*- (nbFormula * 25)*/;
 
-	facetList->SetBounds(sx, sy, 202, (lg - sy));
+	facetList->SetBounds(sx, sy, 202 + offset_width, (lg - sy));
 	sy += (facetList->GetHeight() + 5);
 	//historyList->SetBounds(sx, sy, 202, (lg - sy));
 
@@ -690,8 +694,8 @@ void MolFlow::PlaceComponents() {
 
 void MolFlow::ClearFacetParams() {
 	facetPanel->SetTitle("Selected Facet (none)");
-	facetSticking->Clear();
-	facetSticking->SetEditable(false);
+	/*facetSticking->Clear();
+	facetSticking->SetEditable(false);*/
 	facetFILabel->SetEnabled(false);
 	facetFIAreaLabel->SetEnabled(false);
 	facetFlow->Clear();
@@ -702,8 +706,8 @@ void MolFlow::ClearFacetParams() {
 	facetDesRate->SetEditable(false);
 	facetArea->SetEditable(false);
 	facetArea->Clear();
-	facetPumping->SetEditable(false);
-	facetPumping->Clear();
+	/*facetPumping->SetEditable(false);
+	facetPumping->Clear();*/
 	facetcoverage->SetEditable(false);
 	facetcoverage->Clear();
 	facetcovering->SetEditable(false);
@@ -729,7 +733,7 @@ void MolFlow::ApplyFacetParams() {
 
 	Geometry *geom = worker.GetGeometry();
 	size_t nbFacet = geom->GetNbFacet();
-
+	/*
 	// Sticking
 	double sticking;
 	bool stickingNotNumber;
@@ -744,14 +748,14 @@ void MolFlow::ApplyFacetParams() {
 	}
 	else {
 		if (facetSticking->GetText() == "...") doSticking = false;
-		else {/*
-			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;*/
+		//else {
+		//	GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+		//	UpdateFacetParams();
+		//	return;
 			doSticking = true;
 			stickingNotNumber = true;
 		}
-	}
+	}*/
 
 	// DesRate
 	double DesRate;
@@ -952,6 +956,7 @@ void MolFlow::ApplyFacetParams() {
 	for (int i = 0; i < nbFacet; i++) {
 		Facet *f = geom->GetFacet(i);
 		if (f->selected) {
+			/*
 			if (doSticking) {
 				if (!stickingNotNumber) {
 					f->sh.sticking = sticking;
@@ -960,7 +965,7 @@ void MolFlow::ApplyFacetParams() {
 				else {
 					f->userSticking = facetSticking->GetText();
 				}
-			}
+			}*/
 
 			if (doDesRate) {
 				if (!DesRateNotNumber) {
@@ -1085,7 +1090,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
  		for (size_t sel = 1; sel < selectedFacets.size();sel++) {
 			f = geom->GetFacet(selectedFacets[sel]);
 			double fArea = f->GetArea();
-			stickingE = stickingE && (f0->userSticking.compare(f->userSticking) == 0) && IsEqual(f0->sh.sticking, f->sh.sticking);
+			//stickingE = stickingE && (f0->userSticking.compare(f->userSticking) == 0) && IsEqual(f0->sh.sticking, f->sh.sticking);
 			opacityE = opacityE && (f0->userOpacity.compare(f->userOpacity) == 0) && IsEqual(f0->sh.opacity, f->sh.opacity);
 			temperatureE = temperatureE && IsEqual(f0->sh.temperature, f->sh.temperature);
 			flowE = flowE && f0->userOutgassing.compare(f->userOutgassing) == 0 && IsEqual(f0->sh.outgassing, f->sh.outgassing);
@@ -1112,12 +1117,12 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		if (selectedFacets.size() > 1) facetAreaLabel->SetText("Sum Area (cm\262):");
 		else facetAreaLabel->SetText("Area (cm\262):");
 		facetArea->SetText(sumArea);
-		if (stickingE) {
+		/*if (stickingE) {
 			if (f0->userSticking.length() == 0)
 				facetSticking->SetText(f0->sh.sticking);
 			else facetSticking->SetText(f0->userSticking.c_str());
 		}
-		else facetSticking->SetText("...");
+		else facetSticking->SetText("...");*/
 
 		if (desrateE) {
 			if (f0->userdesorption.length() == 0) {
@@ -1154,7 +1159,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		if (desorbTypeNE) facetDesTypeN->SetText(f0->sh.desorbTypeN); else facetDesTypeN->SetText("...");
 		if (recordE) facetRecType->SetSelectedIndex(f0->sh.profileType); else facetRecType->SetSelectedValue("...");
 
-
+		/*
 		if (selectedFacets.size() == 1) {
 			facetPumping->SetFocusable(true);
 			//calcFlow();
@@ -1165,7 +1170,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		else {
 			facetPumping->SetFocusable(false);
 			facetPumping->SetText("...");
-		}
+		}*/
 
 		if (desorbTypeE) {
 			facetDesType->SetSelectedIndex(f0->sh.desorbType);
@@ -1233,7 +1238,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		facetDesRate->SetFocusable(true);
 		facetcoverage->SetEditable(true);
 		facetcovering->SetEditable(true);
-		facetSticking->SetFocusable(true);
+		//facetSticking->SetFocusable(true);
 		facetOpacity->SetEditable(true);
 		facetTemperature->SetEditable(true);
 		facetSideType->SetEditable(true);
@@ -2345,11 +2350,12 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 
 		//TEXT --------------------------------------------------------------------
 	case MSG_TEXT_UPD:
-		if (src == facetSticking) {
+		/*if (src == facetSticking) {
 			//calcFlow();
 			facetApplyBtn->SetEnabled(true);
 		}
-		else if (src == facetOpacity) {
+		else if*/
+		if (src == facetOpacity) {
 			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetDesTypeN) {
@@ -2358,7 +2364,7 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetTemperature) {
 			//calcFlow();
 			if (facetcoverage->GetText() != "...") {
-				calcStickingnew();
+				//calcStickingnew();
 				calcDesorptionRate();
 			}
 			facetApplyBtn->SetEnabled(true);
@@ -2388,32 +2394,33 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			// //else if ( src == facetMass ) {
 			//  facetApplyBtn->SetEnabled(true);
 		}
-		else if (src == facetPumping) {// do nothing, we don't need pumping here
+		/*else if (src == facetPumping) {// do nothing, we don't need pumping here
 			//calcSticking();
 			//facetApplyBtn->SetEnabled(true);
 			
 			// //else if ( src == facetMass ) {
 			//  facetApplyBtn->SetEnabled(true);
-		}
+		}*/
 		else if (src == facetcoverage) {
 			calcCovering();
-			calcStickingnew();
+			//calcStickingnew();
 			calcDesorptionRate();
 			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetcovering) {
 			calcCoverage();
-			calcStickingnew();
+			//calcStickingnew();
 			calcDesorptionRate();
 			facetApplyBtn->SetEnabled(true);
 		}
 		break;
 
 	case MSG_TEXT:
-		if (src == facetSticking) {
+		/*if (src == facetSticking) {
 			ApplyFacetParams();
 		}
-		else if (src == facetDesTypeN) {
+		else if*/
+		if (src == facetDesTypeN) {
 			ApplyFacetParams();
 		}
 		else if (src == facetOpacity) {
@@ -2422,9 +2429,9 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetTemperature) {
 			ApplyFacetParams();
 		}
-		else if (src == facetPumping) {
+		/*else if (src == facetPumping) {
 			ApplyFacetParams();
-		}
+		}*/
 		else if (src == facetFlow) {
 			ApplyFacetParams();
 		}
@@ -3059,15 +3066,15 @@ void MolFlow::SaveConfig() {
 	SAFE_DELETE(f);
 
 }
-
+/*
 void MolFlow::calcFlow() {
-	double sticking;
+	double sticking=1;
 	double area;
 	double outgassing;
 	double temperature;
 	//double mass;
 
-	facetSticking->GetNumber(&sticking);
+	//facetSticking->GetNumber(&sticking);
 	facetArea->GetNumber(&area);
 	facetTemperature->GetNumber(&temperature);
 	//facetMass->GetNumber(&mass);
@@ -3075,9 +3082,9 @@ void MolFlow::calcFlow() {
 	outgassing = 1 * sticking*area / 10.0 / 4.0*sqrt(8.0*8.31*temperature / PI / (worker.wp.gasMass*0.001));
 	facetPumping->SetText(outgassing);
 	return;
-}
+}*/
 
-void MolFlow::calcSticking() {
+/*void MolFlow::calcSticking() {
 	double sticking;
 	double area;
 	double outgassing;
@@ -3102,9 +3109,24 @@ void MolFlow::calcSticking() {
 	//	calcFlow();
 	//}
 	return;
-}
-
+}*/
+/*
 void MolFlow::calcStickingnew() {
+	llong covering;
+	double sticking;
+	facetcovering->GetNumberSizeT(&covering);
+	if (covering) {
+		if (covering < 100) {
+			sticking = 0;
+		}
+		else
+		{
+			sticking = 1;
+		}
+	}
+
+
+	
 	double s1 = 0.1;
 	double s2 = 0.2;
 	double E_ad = pow(10, -21);
@@ -3127,9 +3149,7 @@ void MolFlow::calcStickingnew() {
 		}
 	}
 	facetSticking->SetText(sticking);
-
-
-}
+}*/
 
 void MolFlow::calcCoverage() {
 	llong covering;
