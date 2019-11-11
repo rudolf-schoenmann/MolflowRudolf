@@ -92,6 +92,11 @@ public:
 	void calcDesorptionRate();
 	double calcNmono();
 	double calcdNsurf();
+
+	void calcVolume();
+	void calcConcentration();
+	void calcMass();
+	void calcDepth();
 	
 	bool EvaluateVariable(VLIST *v);
 
