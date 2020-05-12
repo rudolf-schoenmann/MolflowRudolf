@@ -1159,12 +1159,16 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 			facetPumping->SetFocusable(true);
 			//calcFlow();
 			facetPumping->SetText(0);
+			facetcovering->SetEditable(true);
+
 
 
 		}
 		else {
 			facetPumping->SetFocusable(false);
 			facetPumping->SetText("...");
+			facetcovering->SetEditable(false);
+			facetcovering->SetText("...");
 		}
 
 		if (desorbTypeE) {
@@ -1232,7 +1236,6 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		//Enabled->Editable
 		facetDesRate->SetFocusable(true);
 		facetcoverage->SetEditable(true);
-		facetcovering->SetEditable(true);
 		facetSticking->SetFocusable(true);
 		facetOpacity->SetEditable(true);
 		facetTemperature->SetEditable(true);
