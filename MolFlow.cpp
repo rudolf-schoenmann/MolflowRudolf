@@ -1137,7 +1137,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 
 		if (coverageE) {
 			if (f0->usercoverage.length() == 0)
-				facetcoverage->SetText(double((f0->facetHitCache.hit.covering)/(calcNmono()/calcdNsurf())));
+				facetcoverage->SetText(double((f0->facetHitCache.hit.covering)/calcNmono()));
 			else facetcoverage->SetText(f0->usercoverage.c_str());
 		}
 		else facetcoverage->SetText("...");
@@ -3134,14 +3134,14 @@ void MolFlow::calcStickingnew() {
 void MolFlow::calcCoverage() {
 	llong covering;
 	facetcovering->GetNumberSizeT(&covering);
-	facetcoverage->SetText(double((covering) / (calcNmono() / calcdNsurf())));
+	facetcoverage->SetText(double((covering) / calcNmono()));
 
 }
 
 void MolFlow::calcCovering() {
 	double coverage;
 	facetcoverage->GetNumber(&coverage);
-	facetcovering->SetText(llong(abs(coverage * calcNmono() / calcdNsurf())));
+	facetcovering->SetText(llong(abs(coverage * calcNmono())));
 
 }
 
@@ -3160,7 +3160,7 @@ double MolFlow::calcdNsurf() {// Calculates the (carbon equivalent realtive) mas
 //double calcDesorption("Facet"){}
 //double calcDesorptionRate("Facet"){}
 
-double MolFlow::calcDesorption() {
+double MolFlow::calcDesorption() {// deprecated function body
 	double d = 1;
 	double E_de = 1.5E-21;
 	double coverage;
@@ -3173,7 +3173,7 @@ double MolFlow::calcDesorption() {
 	return desorption;
 }
 
-void MolFlow::calcDesorptionRate() {
+void MolFlow::calcDesorptionRate() {// deprecated function body
 	double temperature;
 	facetTemperature->GetNumber(&temperature);
 
