@@ -70,6 +70,9 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "HistogramPlotter.h"
 #include <iostream>
 
+double MAX_LLONG_IN_DOUBLE = static_cast<double>(18446744073709549568); //18446744073709549568: 2047 smaller than max value
+llong MAX_LLONG_IN_LLONG = static_cast<llong>(MAX_LLONG_IN_DOUBLE);
+
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "ContaminationFlow";
@@ -808,7 +811,7 @@ void MolFlow::ApplyFacetParams() {
 		}
 	}
 	/*
-	if (facetcovering->GetNumberSizeT(&covering)) {
+	if (facetcovering->GetNumberLlong(&covering)) {
 		if (covering < 0) {
 			GLMessageBox::Display("Covering must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			return;
@@ -976,7 +979,11 @@ void MolFlow::ApplyFacetParams() {
 			if (docoverage) {
 				if (!coverageNotNumber) {
 					double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
-					f->facetHitCache.hit.covering = llong(abs(coverage*Nmono));
+					double coveringtmp = coverage*Nmono;
+					if (coveringtmp > MAX_LLONG_IN_DOUBLE)
+						f->facetHitCache.hit.covering = MAX_LLONG_IN_LLONG;
+					else
+						f->facetHitCache.hit.covering = llong(coveringtmp);
 					f->usercoverage = "";
 					f->usercovering = "";
 				}
@@ -1072,7 +1079,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 
 		double f0Area = f0->GetArea();
 		double sumArea = f0Area; //sum facet area
-		double sumCov = f0->facetHitCache.hit.covering;
+		double sumCov = (double)f0->facetHitCache.hit.covering;
 		double Nmono0 = (f0->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 
 		bool stickingE = true;
@@ -1093,7 +1100,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 			double fArea = f->GetArea();
 			double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 			
-			sumCov+= f->facetHitCache.hit.covering;
+			sumCov+= (double)f->facetHitCache.hit.covering;
 
 			stickingE = stickingE && (f0->userSticking.compare(f->userSticking) == 0) && IsEqual(f0->sh.sticking, f->sh.sticking);
 			opacityE = opacityE && (f0->userOpacity.compare(f->userOpacity) == 0) && IsEqual(f0->sh.opacity, f->sh.opacity);
@@ -1160,7 +1167,10 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		}
 		else facetcovering->SetText("...");
 		*/
-		facetcovering->SetText(llong(sumCov));
+		if (sumCov > MAX_LLONG_IN_DOUBLE)
+			facetcovering->SetText("...");
+		else
+			facetcovering->SetText((llong)sumCov, true);
 
 		if (temperatureE) facetTemperature->SetText(f0->sh.temperature); else facetTemperature->SetText("...");
 		if (is2sidedE) facetSideType->SetSelectedIndex(f0->sh.is2sided); else facetSideType->SetSelectedValue("...");
@@ -3147,7 +3157,7 @@ void MolFlow::calcStickingnew() {
 
 void MolFlow::calcCoverage() {
 	llong covering;
-	facetcovering->GetNumberSizeT(&covering);
+	facetcovering->GetNumberLlong(&covering);
 	facetcoverage->SetText(double((covering) / calcNmono()));
 
 }
@@ -3155,7 +3165,11 @@ void MolFlow::calcCoverage() {
 void MolFlow::calcCovering() {
 	double coverage;
 	facetcoverage->GetNumber(&coverage);
-	facetcovering->SetText(llong(abs(coverage * calcNmono())));
+	double coveringtmp = abs(coverage * calcNmono());
+	if (coveringtmp > MAX_LLONG_IN_DOUBLE)
+		facetcovering->SetText("...");
+	else
+		facetcovering->SetText(size_t(coveringtmp), true);
 
 }
 
