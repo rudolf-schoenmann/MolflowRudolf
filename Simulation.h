@@ -1,9 +1,9 @@
 /*
-Program:     ContaminationFlow
-Description: Monte Carlo simulator for satellite contanimation studies
-Authors:     Rudolf Schönmann / Hoai My Van
-Copyright:   TU Munich
-Forked from: Molflow (CERN) (https://cern.ch/molflow)
+Program:     MolFlow+ / Synrad+
+Description: Monte Carlo simulator for ultra-high vacuum and synchrotron radiation
+Authors:     Jean-Luc PONS / Roberto KERSEVAN / Marton ADY
+Copyright:   E.S.R.F / CERN
+Website:     https://cern.ch/molflow
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,7 +27,10 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "Parameter.h"
 #include <tuple>
 
-const double carbondiameter = 2 * 76E-12;
+//const double carbondiameter = 2 * 76E-12;//deprecated since we now consider H2O as contaminant
+const double carbondiameter = 276E-12; // 96 pm O-H bond length + 180 pm hydrogen brigde bond between H and next O
+//This is not very accurated, espacially considering a quadratic lattice of H2O molecules on the surface.
+//Improvement necessary!
 const double kb = 1.38E-23;
 const double tau = 1E-13;
 
