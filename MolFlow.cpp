@@ -85,7 +85,7 @@ const char *fileSFilters = "MolFlow saveable files\0*.xml;*.zip;*.geo;*.geo7z;*.
 static const char *fileDesFilters = "Desorption files\0*.des\0All files\0*.*\0";
 
 int cSize = 4;
-int offset_width = 16;
+int offset_width = 0;
 int   cWidth[] = { 30+offset_width, 56, 50, 50 };
 char *cName[] = { "#", "Hits", "Des", "Abs" };
 
@@ -473,12 +473,12 @@ int MolFlow::OneTimeSceneInit()
 	facetPumping = new GLTextField(0, NULL);
 	outputPanel->Add(facetPumping);*/
 	
-	facetcoverageLabel = new GLLabel("Coverage [co2 eq./monolayer]:");
+	facetcoverageLabel = new GLLabel("Coverage [C eq./monolayer]:");
 	outputPanel->Add(facetcoverageLabel);
 	facetcoverage = new GLTextField(0, NULL); //can probably be optimized in functions below
 	outputPanel->Add(facetcoverage);
 
-	facetcoveringLabel = new GLLabel("Covering [co2 eq. particles]:");
+	facetcoveringLabel = new GLLabel("Covering [C eq. particles]:");
 	outputPanel->Add(facetcoveringLabel);
 	facetcovering = new GLTextField(0, NULL);
 	outputPanel->Add(facetcovering);
@@ -577,7 +577,10 @@ void MolFlow::PlaceComponents() {
 	// Selected facet -----------------------------------------
 	int offset_output = 0;
 	int offset_input = 25;
-	facetPanel->SetBounds(sx, sy, 202+ offset_width, 330 + offset_output + offset_input);
+	int offset_facet = 150;
+	int offset_text = 12;
+
+	facetPanel->SetBounds(sx, sy, 202+ offset_width, 330 + offset_output + offset_input+offset_facet);
 
 	facetPanel->SetCompBounds(inputPanel, 5, 16, 192+ offset_width, 90 + offset_input);
 
@@ -618,13 +621,31 @@ void MolFlow::PlaceComponents() {
 	facetPanel->SetCompBounds(facetSideType, 65 , cursorY, 130 + offset_width, 18);
 
 	facetPanel->SetCompBounds(facetTLabel, 7, cursorY += 25, 100, 18);
-	facetPanel->SetCompBounds(facetOpacity, 110 , cursorY, 82 + offset_width, 18);
+	facetPanel->SetCompBounds(facetOpacity, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
 
 	facetPanel->SetCompBounds(facetTempLabel, 7, cursorY += 25, 100, 18);
-	facetPanel->SetCompBounds(facetTemperature, 110 , cursorY, 82 + offset_width, 18);
+	facetPanel->SetCompBounds(facetTemperature, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
 
 	facetPanel->SetCompBounds(facetAreaLabel, 7, cursorY += 25, 100, 18);
-	facetPanel->SetCompBounds(facetArea, 110 , cursorY, 82 + offset_width, 18);
+	facetPanel->SetCompBounds(facetArea, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
+
+	facetPanel->SetCompBounds(facetSurfaceFactorLabel, 7, cursorY += 25, 100, 18);
+	facetPanel->SetCompBounds(facetSurfaceFactor, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
+
+	facetPanel->SetCompBounds(facetDepthLabel, 7, cursorY += 25, 100, 18);
+	facetPanel->SetCompBounds(facetDepth, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
+
+	facetPanel->SetCompBounds(facetVolumeLabel, 7, cursorY += 25, 100, 18);
+	facetPanel->SetCompBounds(facetVolume, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
+
+	facetPanel->SetCompBounds(facetDiffusionLabel, 7, cursorY += 25, 100, 18);
+	facetPanel->SetCompBounds(facetDiffusion, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
+
+	facetPanel->SetCompBounds(facetConcentrationLabel, 7, cursorY += 25, 100, 18);
+	facetPanel->SetCompBounds(facetConcentration, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
+
+	facetPanel->SetCompBounds(facetMassLabel, 7, cursorY += 25, 100, 18);
+	facetPanel->SetCompBounds(facetMass, 110 + offset_text, cursorY, 82 + offset_width - offset_text, 18);
 
 	facetPanel->SetCompBounds(facetReLabel, 7, cursorY += 25, 60, 18);
 	facetPanel->SetCompBounds(facetRecType, 65 , cursorY, 130 + offset_width, 18);
@@ -706,6 +727,18 @@ void MolFlow::ClearFacetParams() {
 	facetDesRate->SetEditable(false);
 	facetArea->SetEditable(false);
 	facetArea->Clear();
+	facetSurfaceFactor->SetEditable(false);
+	facetSurfaceFactor->Clear();
+	facetDepth->SetEditable(false);
+	facetDepth->Clear();
+	facetVolume->SetEditable(false);
+	facetVolume->Clear();
+	facetDiffusion->SetEditable(false);
+	facetDiffusion->Clear();
+	facetConcentration->SetEditable(false);
+	facetConcentration->Clear();
+	facetMass->SetEditable(false);
+	facetMass->Clear();
 	/*facetPumping->SetEditable(false);
 	facetPumping->Clear();*/
 	facetcoverage->SetEditable(false);
@@ -777,6 +810,99 @@ void MolFlow::ApplyFacetParams() {
 			return;*/
 			doDesRate = true;
 			DesRateNotNumber = true;
+		}
+	}
+
+	//facetArea
+	double surfacefactor;
+	double surfacefactorNotNumber;
+	double dosurfacefactor = false;
+
+	if (facetSurfaceFactor->GetNumber(&surfacefactor)) {
+		if (surfacefactor < 1.0) {
+			GLMessageBox::Display("Surfacefactor must be >= 1", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		dosurfacefactor = true;
+		surfacefactorNotNumber = false;
+	}
+	else {
+		if (facetSurfaceFactor->GetText() == "...") dosurfacefactor = false;
+		else {/*
+			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+			UpdateFacetParams();
+			return;*/
+			dosurfacefactor = true;
+			surfacefactorNotNumber = true;
+		}
+	}
+
+	double depth;
+	double depthNotNumber;
+	double doDepth = false;
+
+	if (facetDepth->GetNumber(&depth)) {
+		if (depth < 0.0) {
+			GLMessageBox::Display("Facet Depth must be positve", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		doDepth = true;
+		depthNotNumber = false;
+	}
+	else {
+		if (facetDepth->GetText() == "...") doDepth = false;
+		else {/*
+			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+			UpdateFacetParams();
+			return;*/
+			doDepth = true;
+			depthNotNumber = true;
+		}
+	}
+
+	double diffusion;
+	double diffusionNotNumber;
+	double doDiffusion = false;
+
+	if (facetDiffusion->GetNumber(&diffusion)) {
+		if (diffusion < 0.0) {
+			GLMessageBox::Display("Facet Diffusion must be positve", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		doDiffusion = true;
+		diffusionNotNumber = false;
+	}
+	else {
+		if (facetDiffusion->GetText() == "...") doDiffusion = false;
+		else {/*
+			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+			UpdateFacetParams();
+			return;*/
+			doDiffusion = true;
+			diffusionNotNumber = true;
+		}
+	}
+
+	double concentration;
+	double concentrationNotNumber;
+	double doConcentration = false;
+
+	if (facetConcentration->GetNumber(&concentration)) {
+		if (concentration < 0.0) {
+			GLMessageBox::Display("Facet Concentration must be positve", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		doConcentration = true;
+		concentrationNotNumber = false;
+	}
+	else {
+		if (facetDiffusion->GetText() == "...") doConcentration = false;
+		else {/*
+			GLMessageBox::Display("Invalid sticking number","Error",GLDLG_OK,GLDLG_ICONERROR);
+			UpdateFacetParams();
+			return;*/
+			doConcentration = true;
+			concentrationNotNumber = true;
 		}
 	}
 
@@ -966,6 +1092,45 @@ void MolFlow::ApplyFacetParams() {
 					f->userSticking = facetSticking->GetText();
 				}
 			}*/
+			if (dosurfacefactor) {
+				if (!surfacefactorNotNumber) {
+					f->sh.effectiveSurfaceFactor = surfacefactor;
+					f->userSurfacefactor = "";
+				}
+				else {
+					f->userSurfacefactor = facetSurfaceFactor->GetText();
+				}
+			}
+
+			if (doDepth) {
+				if (!depthNotNumber) {
+					f->sh.facetDepth = depth;
+					f->userSurfacefactor = "";
+				}
+				else {
+					f->userDepth = facetDepth->GetText();
+				}
+			}
+
+			if (doDiffusion) {
+				if (!diffusionNotNumber) {
+					f->sh.diffusionCoefficient = diffusion;
+					f->userDiffusion = "";
+				}
+				else {
+					f->userDiffusion = facetDiffusion->GetText();
+				}
+			}
+
+			if (doConcentration) {
+				if (!concentrationNotNumber) {
+					f->sh.concentration = concentration;
+					f->userConcentration = "";
+				}
+				else {
+					f->userConcentration = facetConcentration->GetText();
+				}
+			}
 
 			if (doDesRate) {
 				if (!DesRateNotNumber) {
@@ -1073,6 +1238,8 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 
 		double f0Area = f0->GetArea();
 		double sumArea = f0Area; //sum facet area
+		double sumVolume = f0Area * f0->sh.facetDepth * (f0->sh.is2sided ? 0.5 : 1); //sum facet area
+		double sumMass = sumVolume * f0->sh.concentration;
 
 		bool stickingE = true;
 		bool opacityE = true;
@@ -1086,10 +1253,15 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		bool coverageE = true;
 		bool coveringE = true;
 		bool desrateE = true;
+		bool surfaceFactorE = true;
+		bool facetDepthE = true;
+		bool facetDiffusionE = true;
+		bool facetConcentrationE = true;
 
  		for (size_t sel = 1; sel < selectedFacets.size();sel++) {
 			f = geom->GetFacet(selectedFacets[sel]);
 			double fArea = f->GetArea();
+			double fVolume= fArea * f->sh.facetDepth * (f->sh.is2sided ? 0.5 : 1);
 			//stickingE = stickingE && (f0->userSticking.compare(f->userSticking) == 0) && IsEqual(f0->sh.sticking, f->sh.sticking);
 			opacityE = opacityE && (f0->userOpacity.compare(f->userOpacity) == 0) && IsEqual(f0->sh.opacity, f->sh.opacity);
 			temperatureE = temperatureE && IsEqual(f0->sh.temperature, f->sh.temperature);
@@ -1100,9 +1272,15 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 			desorbTypeNE = desorbTypeNE && IsEqual(f0->sh.desorbTypeN, f->sh.desorbTypeN);
 			recordE = recordE && (f0->sh.profileType == f->sh.profileType);  //profiles
 			sumArea += fArea;
+			sumVolume += fVolume;
+			sumMass += fVolume * f->sh.concentration;
 			coverageE= coverageE && (f0->usercoverage.compare(f->usercoverage) == 0) && IsEqual(f0->facetHitCache.hit.covering, f->facetHitCache.hit.covering);
 			coveringE = coveringE && (f0->usercovering.compare(f->usercovering) == 0) && IsEqual(f0->facetHitCache.hit.covering, f->facetHitCache.hit.covering);
 			desrateE= desrateE && (f0->userdesorption.compare(f->userdesorption) == 0) && IsEqual(f0->sh.desorption, f->sh.desorption);
+			surfaceFactorE = surfaceFactorE &&(f0->userSurfacefactor.compare(f->userSurfacefactor)==0)&& IsEqual(f0->sh.effectiveSurfaceFactor, f->sh.effectiveSurfaceFactor);
+			facetDepthE = facetDepthE && (f0->userDepth.compare(f->userDepth) == 0) && IsEqual(f0->sh.facetDepth, f->sh.facetDepth);
+			facetDiffusionE = facetDiffusionE && (f0->userDiffusion.compare(f->userDiffusion) == 0) && IsEqual(f0->sh.diffusionCoefficient, f->sh.diffusionCoefficient);
+			facetConcentrationE = facetConcentrationE && (f0->userConcentration.compare(f->userConcentration) == 0) && IsEqual(f0->sh.concentration, f->sh.concentration);
 		}
 
 		if (nbSel == 1)
@@ -1114,15 +1292,56 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		//if (stickingE && f0->wp.superDest) stickingE = false;
 
 		facetPanel->SetTitle(tmp);
-		if (selectedFacets.size() > 1) facetAreaLabel->SetText("Sum Area (cm\262):");
-		else facetAreaLabel->SetText("Area (cm\262):");
+		if (selectedFacets.size() > 1) { facetAreaLabel->SetText("Sum Area (cm\262):"); facetVolumeLabel->SetText("Sum Volume (cm\263):"); facetMass->SetText("Mass (kg):"); }
+		else { facetAreaLabel->SetText("Area (cm\262):"); facetVolumeLabel->SetText("Facet Volume (cm\263):"); facetMass->SetText("Sum Mass (kg):");}
 		facetArea->SetText(sumArea);
+		facetVolume->SetText(sumVolume);
+		facetMass->SetText(sumMass);
+
 		/*if (stickingE) {
 			if (f0->userSticking.length() == 0)
 				facetSticking->SetText(f0->sh.sticking);
 			else facetSticking->SetText(f0->userSticking.c_str());
 		}
 		else facetSticking->SetText("...");*/
+
+		if (facetDiffusionE) {
+			if (f0->userDiffusion.length() == 0) {
+				f0->sh.diffusionCoefficient = f0->sh.diffusionCoefficient < 0.0 ? 0.0 : f0->sh.diffusionCoefficient;
+				facetDiffusion->SetText(f0->sh.diffusionCoefficient);
+			}
+			else facetDiffusion->SetText(f0->userDiffusion.c_str());
+		}
+		else { facetDiffusion->SetText("..."); }
+
+		if (facetConcentrationE) {
+			facetMass->SetEditable(true);
+			if (f0->userConcentration.length() == 0) {
+				f0->sh.concentration = f0->sh.concentration < 0.0 ? 0.0 : f0->sh.concentration;
+				facetConcentration->SetText(f0->sh.concentration);
+			}
+			else facetConcentration->SetText(f0->userConcentration.c_str());
+		}
+		else { facetConcentration->SetText("..."); facetMass->SetEditable(false);}
+
+		if (surfaceFactorE) {
+			if (f0->userSurfacefactor.length() == 0) {
+				f0->sh.effectiveSurfaceFactor= f0->sh.effectiveSurfaceFactor < 1.0 ? 1.0 : f0->sh.effectiveSurfaceFactor;
+				facetSurfaceFactor->SetText(f0->sh.effectiveSurfaceFactor);
+			}
+			else facetSurfaceFactor->SetText(f0->userSurfacefactor.c_str());
+		}
+		else { facetSurfaceFactor->SetText("...");}
+
+		if (facetDepthE) {
+			facetVolume->SetEditable(true);
+			if (f0->userDepth.length() == 0) {
+				f0->sh.facetDepth= f0->sh.facetDepth < 0.0 ? 0.0 : f0->sh.facetDepth;
+				facetDepth->SetText(f0->sh.facetDepth);
+			}
+			else facetDepth->SetText(f0->userDepth.c_str());
+		}
+		else { facetDepth->SetText("..."); facetVolume->SetEditable(false); }
 
 		if (desrateE) {
 			if (f0->userdesorption.length() == 0) {
@@ -1245,6 +1464,10 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		facetDesType->SetEditable(true);
 		facetRecType->SetEditable(true);
 		facetApplyBtn->SetEnabled(false);
+		facetSurfaceFactor->SetEditable(true);
+		facetDepth->SetEditable(true);
+		facetDiffusion->SetEditable(true);
+		facetConcentration->SetEditable(true);
 	}
 	else {
 		ClearFacetParams();
@@ -2413,6 +2636,32 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			calcDesorptionRate();
 			facetApplyBtn->SetEnabled(true);
 		}
+		else if (src == facetSurfaceFactor) {
+			facetApplyBtn->SetEnabled(true);
+		}
+		else if (src == facetDepth) {
+			calcVolume();
+			calcMass();
+			facetApplyBtn->SetEnabled(true);
+		}
+		else if (src == facetVolume) {
+			calcDepth();
+			calcMass();
+			facetApplyBtn->SetEnabled(true);
+		}
+		else if (src == facetDiffusion) {
+			facetApplyBtn->SetEnabled(true);
+		}
+
+		else if (src == facetConcentration) {
+			calcMass();
+			facetApplyBtn->SetEnabled(true);
+		}
+		else if (src == facetMass) {
+			calcConcentration();
+			facetApplyBtn->SetEnabled(true);
+		}
+
 		break;
 
 	case MSG_TEXT:
@@ -2442,6 +2691,12 @@ void MolFlow::ProcessMessage(GLComponent *src, int message)
 			ApplyFacetParams();
 		}
 		else if (src == facetcovering) {
+			ApplyFacetParams();
+		}
+		else if (src == facetSurfaceFactor) {
+			ApplyFacetParams();
+		}
+		else if (src == facetDepth) {
 			ApplyFacetParams();
 		}
 		break;
@@ -3202,6 +3457,58 @@ void MolFlow::calcDesorptionRate() {
 	desorptionRate = desorptionRate<0.0? 0.0 : desorptionRate;
 	facetDesRate->SetText(desorptionRate);
 	
+}
+
+void MolFlow::calcVolume() {
+
+	Facet *f;
+	double area = 0.0; double facetdepth;
+
+
+	Geometry *geom = worker.GetGeometry();
+	std::vector<size_t> selectedFacets = geom->GetSelectedFacets();
+	for (size_t sel = 0; sel < selectedFacets.size();sel++) {
+		f = geom->GetFacet(selectedFacets[sel]);
+		area += f->GetArea() * (f->sh.is2sided ? 0.5 : 1);
+	}
+
+	facetDepth->GetNumber(&facetdepth);
+	facetVolume->SetText(facetdepth*area);
+
+}
+
+void MolFlow::calcDepth() {
+	Facet *f;
+	double area = 0.0; double volume;
+
+	Geometry *geom = worker.GetGeometry();
+	std::vector<size_t> selectedFacets = geom->GetSelectedFacets();
+	for (size_t sel = 0; sel < selectedFacets.size();sel++) {
+		f = geom->GetFacet(selectedFacets[sel]);
+		area += f->GetArea() * (f->sh.is2sided ? 0.5 : 1);
+	}
+
+	facetVolume->GetNumber(&volume);
+	facetDepth->SetText(volume / area);
+}
+
+//TODO: correct transformation?
+void MolFlow::calcConcentration() {
+	double mass, volume;
+	facetVolume->GetNumber(&volume);
+	facetMass->GetNumber(&mass);
+	if (volume == 0)
+		facetConcentration->SetText(0);
+	else
+		facetConcentration->SetText(mass / volume);
+
+}
+
+void MolFlow::calcMass() {
+	double concentration, volume;
+	facetVolume->GetNumber(&volume);
+	facetConcentration->GetNumber(&concentration);
+	facetMass->SetText(concentration*volume);
 }
 
 

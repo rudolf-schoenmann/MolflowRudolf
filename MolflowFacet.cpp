@@ -182,6 +182,10 @@ void Facet::LoadXML(xml_node f, size_t nbVertex, bool isMolflowFile, bool& ignor
 		hasOutgassingFile = f.child("Outgassing").attribute("hasOutgassingFile").as_bool();
 		sh.useOutgassingFile = f.child("Outgassing").attribute("useOutgassingFile").as_bool();
 		sh.temperature = f.child("Temperature").attribute("value").as_double();
+		sh.effectiveSurfaceFactor = f.child("EffectiveSurfaceFactor").attribute("value").as_double();
+		sh.facetDepth = f.child("facetDepth").attribute("value").as_double();
+		sh.diffusionCoefficient = f.child("diffusionCoefficient").attribute("value").as_double();
+		sh.concentration = f.child("facetConcentration").attribute("value").as_double();
 		sh.accomodationFactor = f.child("Temperature").attribute("accFactor").as_double();
 		xml_node reflNode = f.child("Reflection");
 		if (reflNode.attribute("diffusePart") && reflNode.attribute("specularPart")) { //New format
@@ -879,6 +883,18 @@ void  Facet::SaveXML_geom(pugi::xml_node f) {
 	e = f.append_child("Temperature");
 	e.append_attribute("value") = sh.temperature;
 	e.append_attribute("accFactor") = sh.accomodationFactor;
+
+	e=f.append_child("EffectiveSurfaceFactor");
+	e.append_attribute("value") = sh.effectiveSurfaceFactor;
+
+	e = f.append_child("facetDepth");
+	e.append_attribute("value") = sh.facetDepth;
+
+	e = f.append_child("diffusionCoefficient");
+	e.append_attribute("value") = sh.diffusionCoefficient;
+
+	e = f.append_child("facetConcentration");
+	e.append_attribute("value") = sh.concentration;
 
 	e = f.append_child("Reflection");
 
