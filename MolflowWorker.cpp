@@ -1743,6 +1743,7 @@ void Worker::SendFacetHitCounts(Dataport* dpHit) {
 
 void Worker::ExportHitBuffer(char *fileName)
 {
+	RealReload();
 	char tmp[512];
 
 	std::ofstream f;
@@ -1783,6 +1784,7 @@ void Worker::ExportHitBuffer(char *fileName)
 
 void Worker::ExportLoadBuffer(char *fileName)
 {
+	RealReload();
 	char tmp[512];
 
 	std::ofstream f;
