@@ -1675,9 +1675,14 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 	ID.push_back(std::make_pair(0.0, 0.0));
 
 	//First moment
-	ID.push_back(std::make_pair(parameters[paramId].GetX(0),
-		parameters[paramId].GetX(0)*parameters[paramId].GetY(0)*0.100)); //for the first moment (0.1: mbar*l/s -> Pa*m3/s)
-
+	if (parameters[paramId].GetX(0) == 0) {//if first moment == 0
+		//=> we skip that (and do nothing here).
+		//otherwise we would have created one additional pair of (0 0).
+	}
+	else {
+		ID.push_back(std::make_pair(parameters[paramId].GetX(0),
+		parameters[paramId].GetX(0) * parameters[paramId].GetY(0) * 0.100)); //for the first moment (0.1: mbar*l/s -> Pa*m3/s)
+	}
 	//Intermediate moments
 	for (size_t pos = 1; pos <= last_index; pos++) {
 		if (IsEqual(parameters[paramId].GetY(pos) , parameters[paramId].GetY(pos-1))) //two equal values follow, simple integration by multiplying
