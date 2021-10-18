@@ -978,7 +978,8 @@ void MolFlow::ApplyFacetParams() {
 
 			if (docoverage) {
 				if (!coverageNotNumber) {
-					double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+					//double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+					double Nmono = (f->GetArea() * 1E-4 / (pow(particle_diameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 					double coveringtmp = coverage*Nmono;
 					if (coveringtmp > MAX_LLONG_IN_DOUBLE)
 						f->facetHitCache.hit.covering = MAX_LLONG_IN_LLONG;
@@ -1080,7 +1081,8 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		double f0Area = f0->GetArea();
 		double sumArea = f0Area; //sum facet area
 		double sumCov = (double)f0->facetHitCache.hit.covering;
-		double Nmono0 = (f0->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+		//double Nmono0 = (f0->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+		double Nmono0 = (f0->GetArea() * 1E-4 / (pow(particle_diameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 
 		bool stickingE = true;
 		bool opacityE = true;
@@ -1098,8 +1100,9 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
  		for (size_t sel = 1; sel < selectedFacets.size();sel++) {
 			f = geom->GetFacet(selectedFacets[sel]);
 			double fArea = f->GetArea();
-			double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
-			
+			//double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+			double Nmono = (f->GetArea() * 1E-4 / (pow(particle_diameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+
 			sumCov+= (double)f->facetHitCache.hit.covering;
 
 			stickingE = stickingE && (f0->userSticking.compare(f->userSticking) == 0) && IsEqual(f0->sh.sticking, f->sh.sticking);
@@ -3177,7 +3180,8 @@ double MolFlow::calcNmono() {//Calculates the Number of (carbon equivalent) part
 	//GetArea() vs sh.area: 2sided facets treated differently -> here sum over GetArea() saved in facetArea
 	double area;
 	facetArea->GetNumber(&area); //area is in units of [cm^2] => has to be converted to [m^2]
-	double Nmono = (area * 1E-4 /(pow(carbondiameter, 2)));
+	//double Nmono = (area * 1E-4 /(pow(carbondiameter, 2)));
+	double Nmono = (area * 1E-4 / (pow(particle_diameter, 2)));
 	return Nmono;
 }
 

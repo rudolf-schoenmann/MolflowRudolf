@@ -51,7 +51,8 @@ double updatecovering(Facet *iFacet, Worker *worker)//Warum heißt diese Funktion
 //Habe den einzigen Aufruf deaktiviert, weil der Blödsinn gemacht hat.
 {
 	//TODO: adapt units, this may not yet be the correct result: is sh.area given in m^2???
-	double N_mono = iFacet->sh.area / (pow(carbondiameter, 2));
+	//double N_mono = iFacet->sh.area / (pow(carbondiameter, 2));
+	double N_mono = iFacet->sh.area / (pow(particle_diameter, 2));
 	double dN_surf = worker->wp.gasMass / 12.011;
 
 	return dN_surf / N_mono;
