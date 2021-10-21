@@ -76,6 +76,7 @@ private:
   GLToggle	*lowFluxToggle;
   GLButton    *lowFluxInfo;
   GLTextField *cutoffText;
+  GLTextField* gasDiameterText;
 };
 
 #endif /* _GLOBALSETTINGSH_ */

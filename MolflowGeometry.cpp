@@ -47,17 +47,17 @@ extern SynRad*mApp;
 #endif
 
 
-double updatecovering(Facet *iFacet, Worker *worker)//Warum heißt diese Funktion so? Da kommt ja gar kein covering vor...
+/*double updatecovering(Facet *iFacet, Worker *worker)//Warum heißt diese Funktion so? Da kommt ja gar kein covering vor...
 //Habe den einzigen Aufruf deaktiviert, weil der Blödsinn gemacht hat.
 {
 	//TODO: adapt units, this may not yet be the correct result: is sh.area given in m^2???
 	//double N_mono = iFacet->sh.area / (pow(carbondiameter, 2));
-	double N_mono = iFacet->sh.area / (pow(particle_diameter, 2));
+	double N_mono = iFacet->sh.area / (pow(worker->wp.gasDiameter, 2));
 	double dN_surf = worker->wp.gasMass / 12.011;
 
 	return dN_surf / N_mono;
 
-}
+}*/
 
 MolflowGeometry::MolflowGeometry() {
 
@@ -897,6 +897,10 @@ void MolflowGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version, W
 		file->ReadKeyword("sh.gasMass"); file->ReadKeyword(":");
 		worker->wp.gasMass = file->ReadDouble();
 	}
+	if (*version >= 7) {//I do not know the right version
+		file->ReadKeyword("sh.gasDiamete"); file->ReadKeyword(":");
+		worker->wp.gasDiameter = file->ReadDouble();
+	}
 	if (*version >= 10) { //time-dependent version
 		file->ReadKeyword("userMoments"); file->ReadKeyword("{");
 		file->ReadKeyword("nb"); file->ReadKeyword(":");
@@ -1561,6 +1565,7 @@ void MolflowGeometry::SaveGEO(FileWriter *file, GLProgress *prg, Dataport *dpHit
 	file->Write("nbSelection:"); file->Write((!saveSelected) ? mApp->selections.size() : 0, "\n");
 
 	file->Write("sh.gasMass:"); file->Write(worker->wp.gasMass, "\n");
+	file->Write("sh.gasDiameter:"); file->Write(worker->wp.gasDiameter, "\n");
 
 	file->Write("userMoments {\n");
 	file->Write(" nb:"); file->Write((int)worker->userMoments.size());
@@ -2536,6 +2541,7 @@ void MolflowGeometry::SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLP
 	xml_node simuParamNode = saveDoc.append_child("MolflowSimuSettings");
 
 	simuParamNode.append_child("Gas").append_attribute("mass") = work->wp.gasMass;
+	simuParamNode.append_child("Gas").append_attribute("diameter") = work->wp.gasDiameter;
 	simuParamNode.child("Gas").append_attribute("enableDecay") = (int)work->wp.enableDecay; //backward compatibility: 0 or 1
 	simuParamNode.child("Gas").append_attribute("sh.halfLife") = work->wp.halfLife;
 
@@ -2886,6 +2892,7 @@ void MolflowGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgr
 		}
 
 		work->wp.gasMass = simuParamNode.child("Gas").attribute("mass").as_double();
+		work->wp.gasDiameter = simuParamNode.child("Gas").attribute("diameter").as_double();
 		work->wp.halfLife = simuParamNode.child("Gas").attribute("sh.halfLife").as_double();
 		if (simuParamNode.child("Gas").attribute("enableDecay")) {
 			work->wp.enableDecay = simuParamNode.child("Gas").attribute("enableDecay").as_bool();

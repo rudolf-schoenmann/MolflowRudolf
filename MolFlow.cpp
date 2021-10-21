@@ -781,7 +781,7 @@ void MolFlow::ApplyFacetParams() {
 
 	// Coverage and Covering
 	// coverage: one monolayer of contaminating particles means a coverage of 1,0
-	// covering will cout each contaminating parcticle
+	// covering will counts each contaminating parcticle
 
 	double coverage;
 	bool coverageNotNumber;
@@ -979,7 +979,7 @@ void MolFlow::ApplyFacetParams() {
 			if (docoverage) {
 				if (!coverageNotNumber) {
 					//double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
-					double Nmono = (f->GetArea() * 1E-4 / (pow(particle_diameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+					double Nmono = (f->GetArea() * 1E-4 / (pow(worker.wp.gasDiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 					double coveringtmp = coverage*Nmono;
 					if (coveringtmp > MAX_LLONG_IN_DOUBLE)
 						f->facetHitCache.hit.covering = MAX_LLONG_IN_LLONG;
@@ -1082,7 +1082,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 		double sumArea = f0Area; //sum facet area
 		double sumCov = (double)f0->facetHitCache.hit.covering;
 		//double Nmono0 = (f0->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
-		double Nmono0 = (f0->GetArea() * 1E-4 / (pow(particle_diameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+		double Nmono0 = (f0->GetArea() * 1E-4 / (pow(worker.wp.gasDiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 
 		bool stickingE = true;
 		bool opacityE = true;
@@ -1101,7 +1101,7 @@ void MolFlow::UpdateFacetParams(bool updateSelection) { //Calls facetAdvParams->
 			f = geom->GetFacet(selectedFacets[sel]);
 			double fArea = f->GetArea();
 			//double Nmono = (f->GetArea() * 1E-4 / (pow(carbondiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
-			double Nmono = (f->GetArea() * 1E-4 / (pow(particle_diameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
+			double Nmono = (f->GetArea() * 1E-4 / (pow(worker.wp.gasDiameter, 2))); //GetArea() vs sh.area: 2sided facets treated differently
 
 			sumCov+= (double)f->facetHitCache.hit.covering;
 
@@ -2647,7 +2647,7 @@ void MolFlow::BuildPipe(double ratio, int steps) {
 		//default values
 		worker.wp.enableDecay = false;
 		worker.wp.halfLife = 1;
-		worker.wp.gasMass = 28;
+		worker.wp.gasMass = 18.02;
 		worker.ResetMoments();
 	}
 	catch (Error &e) {
@@ -2721,7 +2721,7 @@ void MolFlow::EmptyGeometry() {
 		//default values
 		worker.wp.enableDecay = false;
 		worker.wp.halfLife = 1;
-		worker.wp.gasMass = 28;
+		worker.wp.gasMass = 18.02;
 		worker.ResetMoments();
 	}
 	catch (Error &e) {
@@ -2935,6 +2935,8 @@ void MolFlow::LoadConfig() {
 		compressSavedFiles = f->ReadInt();
 		f->ReadKeyword("sh.gasMass"); f->ReadKeyword(":");
 		worker.wp.gasMass = f->ReadDouble();
+		f->ReadKeyword("sh.gasDiameter"); f->ReadKeyword(":");
+		worker.wp.gasDiameter = f->ReadDouble();
 		f->ReadKeyword("expandShortcutPanel"); f->ReadKeyword(":");
 		bool isOpen = f->ReadInt();
 		if (isOpen) shortcutPanel->Open();
@@ -3072,6 +3074,7 @@ void MolFlow::SaveConfig() {
 		f->Write("autoUpdateFormulas:"); f->Write(autoUpdateFormulas, "\n");
 		f->Write("compressSavedFiles:"); f->Write(compressSavedFiles, "\n");
 		f->Write("sh.gasMass:"); f->Write(worker.wp.gasMass, "\n");
+		f->Write("sh.gasDiameter:"); f->Write(worker.wp.gasDiameter, "\n");
 		f->Write("expandShortcutPanel:"); f->Write(!shortcutPanel->IsClosed(), "\n");
 
 		WRITEI("hideLot", hideLot);
@@ -3176,12 +3179,12 @@ void MolFlow::calcCovering() {
 
 }
 
-double MolFlow::calcNmono() {//Calculates the Number of (carbon equivalent) particles of one monolayer.
+double MolFlow::calcNmono() {//Calculates the Number of particles of one monolayer.
 	//GetArea() vs sh.area: 2sided facets treated differently -> here sum over GetArea() saved in facetArea
 	double area;
 	facetArea->GetNumber(&area); //area is in units of [cm^2] => has to be converted to [m^2]
 	//double Nmono = (area * 1E-4 /(pow(carbondiameter, 2)));
-	double Nmono = (area * 1E-4 / (pow(particle_diameter, 2)));
+	double Nmono = (area * 1E-4 / (pow(worker.wp.gasDiameter, 2)));
 	return Nmono;
 }
 

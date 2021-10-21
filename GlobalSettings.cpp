@@ -165,6 +165,15 @@ GlobalSettings::GlobalSettings(Worker *w) :GLWindow() {
 	cutoffText->SetEditable(false);
 	simuSettingsPanel->Add(cutoffText);
 
+	GLLabel* diameterLabel = new GLLabel("Gas molecular diameter (m):");
+	diameterLabel->SetBounds(290, 200, 150, 19);
+	simuSettingsPanel->Add(diameterLabel);
+
+	gasDiameterText = new GLTextField(0, "");
+	gasDiameterText->SetBounds(460, 195, 100, 19);
+	simuSettingsPanel->Add(gasDiameterText);
+
+
 	applyButton = new GLButton(0, "Apply above settings");
 	applyButton->SetBounds(wD / 2 - 65, 235, 130, 19);
 	Add(applyButton);
@@ -236,6 +245,7 @@ void GlobalSettings::Update() {
 	UpdateOutgassing();
 
 	gasMassText->SetText(worker->wp.gasMass);
+	gasDiameterText->SetText(worker->wp.gasDiameter);
 
 	enableDecay->SetState(worker->wp.enableDecay);
 	halfLifeText->SetText(worker->wp.halfLife);
@@ -445,6 +455,34 @@ void GlobalSettings::ProcessMessage(GLComponent *src, int message) {
 					}
 				}
 			}
+
+			double gd;
+			if (!gasDiameterText->GetNumber(&gd) || !(gd > 0.0)) {
+				GLMessageBox::Display("Invalid gas diameter", "Error", GLDLG_OK, GLDLG_ICONERROR);
+				return;
+			}
+			if (abs(gd - worker->wp.gasDiameter) > 1e-15) {
+				if (mApp->AskToReset()) {//brauche ich das?
+					worker->needsReload = true;
+					worker->wp.gasDiameter = gd;
+					if (worker->GetGeometry()->IsLoaded()) { //check if there is coverage
+						bool hasCoverage = false;
+						size_t nbFacet = worker->GetGeometry()->GetNbFacet();
+						Geometry* geom = worker->GetGeometry();
+						Facet* f;
+						for (size_t i = 0; (i < nbFacet) && (!hasCoverage); i++) {
+							f = geom->GetFacet(nbFacet-1);
+							if (f->facetHitCache.hit.covering > 0.0) {
+								hasCoverage = true;
+							}
+						}
+						if (hasCoverage) GLMessageBox::Display("Covering will stay the same. Coverage will change.", "You have changed the particle diameter.", GLDLG_OK, GLDLG_ICONINFO);
+					}
+				}
+			}
+
+
+
 
 			double hl;
 			if (enableDecay->GetState() && (!halfLifeText->GetNumber(&hl) || !(hl > 0.0))) {

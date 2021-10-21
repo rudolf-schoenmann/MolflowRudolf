@@ -90,7 +90,8 @@ Worker::Worker() {
 	wp.timeWindowSize = 1E-10; //Dirac-delta desorption pulse at t=0
 	wp.useMaxwellDistribution = true;
 	wp.calcConstantFlow = true;
-	wp.gasMass = 28.0;
+	wp.gasMass = 18.02; //mass of water
+	wp.gasDiameter = 276E-12; // 96 pm O-H bond length + 180 pm hydrogen brigde bond between H and next O
 	wp.enableDecay = false;
 	wp.halfLife = 1;
 	wp.finalOutgassingRate = wp.finalOutgassingRate_Pa_m3_sec = wp.totalDesorbedMolecules = 0.0;
@@ -458,7 +459,7 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 		
 		//default values
 		wp.enableDecay = false;
-		wp.gasMass = 28;
+		wp.gasMass = 18.02;
 	}
 
 	/*

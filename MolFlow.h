@@ -44,7 +44,7 @@ class Error;
 
 //const double carbondiameter = 2 * 76E-12;//deprecated since we now consider H2O as contaminant
 const double carbondiameter = 276E-12; // 96 pm O-H bond length + 180 pm hydrogen brigde bond between H and next O
-double particle_diameter = 1E-9; //initialize with one nanometer
+//double particle_diameter = 1E-9; //initialize with one nanometer
 //This is not very accurated, espacially considering a quadratic lattice of H2O molecules on the surface.
 //Improvement necessary!
 const double kb = 1.38E-23;
