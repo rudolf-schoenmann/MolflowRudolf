@@ -1651,7 +1651,6 @@ void MolFlow::LoadFile(char *fName) {
 		ClearAllViews();
 		ResetSimulation(false);
 		worker.LoadGeometry(fullName);
-		
 
 		Geometry *geom = worker.GetGeometry();
 

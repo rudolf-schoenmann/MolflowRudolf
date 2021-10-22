@@ -724,9 +724,10 @@ void Worker::LoadGeometry(char *fileName,bool insert,bool newStr) {
 
 			progressDlg->SetMessage("Building geometry...");
 			if (!insert) {
+				
 				geom->LoadXML_geom(loadXML, this, progressDlg);
 				geom->UpdateName(fileName);
-
+				
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				try {
 					RealReload(); //To create the dpHit dataport for the loading of textures, profiles, etc...

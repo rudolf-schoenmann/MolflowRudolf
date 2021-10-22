@@ -898,7 +898,7 @@ void MolflowGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version, W
 		worker->wp.gasMass = file->ReadDouble();
 	}
 	if (*version >= 7) {//I do not know the right version
-		file->ReadKeyword("sh.gasDiamete"); file->ReadKeyword(":");
+		file->ReadKeyword("sh.gasDiameter"); file->ReadKeyword(":");
 		worker->wp.gasDiameter = file->ReadDouble();
 	}
 	if (*version >= 10) { //time-dependent version
@@ -2541,7 +2541,7 @@ void MolflowGeometry::SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLP
 	xml_node simuParamNode = saveDoc.append_child("MolflowSimuSettings");
 
 	simuParamNode.append_child("Gas").append_attribute("mass") = work->wp.gasMass;
-	simuParamNode.append_child("Gas").append_attribute("diameter") = work->wp.gasDiameter;
+	simuParamNode.child("Gas").append_attribute("diameter") = work->wp.gasDiameter;
 	simuParamNode.child("Gas").append_attribute("enableDecay") = (int)work->wp.enableDecay; //backward compatibility: 0 or 1
 	simuParamNode.child("Gas").append_attribute("sh.halfLife") = work->wp.halfLife;
 
