@@ -324,45 +324,45 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f,size_t mode) {
 	case 18: //imp.rate
 	{
 	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment);  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
-	sprintf(ret, "%g", f->facetHitCache.hit.nbHitEquiv / f->GetArea()*dCoef);
+	sprintf(ret, "%g", f->facetHitCache.nbHitEquiv / f->GetArea()*dCoef);
 	//11.77=sqrt(8*8.31*293.15/3.14/0.028)/4/10
 	break; }
 	case 19: //particle density
 	{
 	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment)*f->DensityCorrection();  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar	
 	
-	sprintf(ret, "%g", f->facetHitCache.hit.sum_1_per_ort_velocity / f->GetArea()*dCoef);
+	sprintf(ret, "%g", f->facetHitCache.sum_1_per_ort_velocity / f->GetArea()*dCoef);
 
 	break; }
 	case 20: //gas density
 	{
 	double dCoef =  1E4 * worker->GetMoleculesPerTP(worker->displayedMoment)*f->DensityCorrection();  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
 	
-	sprintf(ret, "%g", f->facetHitCache.hit.sum_1_per_ort_velocity / f->GetArea()*dCoef*mApp->worker.wp.gasMass / 1000.0 / 6E23);
+	sprintf(ret, "%g", f->facetHitCache.sum_1_per_ort_velocity / f->GetArea()*dCoef*mApp->worker.wp.gasMass / 1000.0 / 6E23);
 	break; }
 	case 21: //avg.pressure
 	{
 	double dCoef = 1E4 * worker->GetMoleculesPerTP(worker->displayedMoment) * (worker->wp.gasMass / 1000 / 6E23) * 0.0100;  //1E4 is conversion from m2 to cm2; 0.01 is Pa->mbar
 	
-	sprintf(ret, "%g", f->facetHitCache.hit.sum_v_ort*dCoef / f->GetArea());
+	sprintf(ret, "%g", f->facetHitCache.sum_v_ort*dCoef / f->GetArea());
 	break; }
 	case 22: //avg. gas speed (estimate)
-		/*sprintf(ret, "%g", 4.0*(double)(f->facetHitCache.hit.nbMCHit+f->facetHitCache.hit.nbDesorbed) / f->facetHitCache.hit.sum_1_per_ort_velocity);*/
-		sprintf(ret, "%g", (f->facetHitCache.hit.nbHitEquiv + static_cast<double>(f->facetHitCache.hit.nbDesorbed)) / f->facetHitCache.hit.sum_1_per_velocity);
+		/*sprintf(ret, "%g", 4.0*(double)(f->facetHitCache.nbMCHit+f->facetHitCache.nbDesorbed) / f->facetHitCache.sum_1_per_ort_velocity);*/
+		sprintf(ret, "%g", (f->facetHitCache.nbHitEquiv + static_cast<double>(f->facetHitCache.nbDesorbed)) / f->facetHitCache.sum_1_per_velocity);
 		//<v_surf>=2*<v_surf_ort>
 		//<v_gas>=1/<1/v_surf>
 		break;
 	case 23:
-		sprintf(ret,"%I64d",f->facetHitCache.hit.nbMCHit);
+		sprintf(ret,"%I64d",f->facetHitCache.nbMCHit);
 		break;
 	case 24:
-		sprintf(ret, "%g", f->facetHitCache.hit.nbHitEquiv);
+		sprintf(ret, "%g", f->facetHitCache.nbHitEquiv);
 		break;
 	case 25:
-		sprintf(ret,"%I64d",f->facetHitCache.hit.nbDesorbed);
+		sprintf(ret,"%I64d",f->facetHitCache.nbDesorbed);
 		break;
 	case 26:
-		sprintf(ret,"%g",f->facetHitCache.hit.nbAbsEquiv);
+		sprintf(ret,"%g",f->facetHitCache.nbAbsEquiv);
 		break;
   }
 

@@ -106,7 +106,7 @@ HistoryWin::HistoryWin(Worker *w) :GLWindow() {
 
 	// variable initialization
 	l_hist = 0;
-	pointintime_list = std::vector< std::pair<float, std::vector<size_t>> >();
+	pointintime_list = std::vector< std::pair<float, std::vector<boost::multiprecision::uint128_t>> >();
 	selectedRows = std::vector<size_t>();
 	// set initial list
 	if(nb_Facets!=0)
@@ -142,13 +142,13 @@ void HistoryWin::UpdateList() {
 	else
 		time = worker->simuTime * (float)1000.0;
 
-	std::vector<size_t> covering;
-	covering = std::vector<size_t>();
+	std::vector<boost::multiprecision::uint128_t> covering;
+	covering = std::vector<boost::multiprecision::uint128_t>();
 
 
 	for (int i = 0;i < nb_Facets;i++) {
 		Facet *f = geom->GetFacet(i);
-		size_t cov = f->facetHitCache.hit.covering;
+		boost::multiprecision::uint128_t cov = f->facetHitCache.covering;
 		covering.push_back(cov);
 		//sprintf(tmp, "%g", cov);
 		//historyList->SetValueAt(i+1,l_hist, tmp);
@@ -165,13 +165,14 @@ void HistoryWin::UpdateList() {
 
 void HistoryWin::UpdateUI() {
 	char tmp[256];
+
 	historyList->SetSize(nb_Facets + 1, l_hist);
 	historyList->SetColumnLabels();
 	for (int i = 0;i < l_hist;i++) {
 		sprintf(tmp, "%g", pointintime_list[i].first);
 		historyList->SetValueAt(0, i, tmp);
-		for (int j = 0;j < nb_Facets;j++) {
-			sprintf(tmp, "%llu", pointintime_list[i].second[j]);
+		for (int j = 0; j < nb_Facets; j++) {
+			strcpy(tmp, (pointintime_list[i].second[j].str()).c_str());
 			historyList->SetValueAt(j+1,i, tmp);
 		}
 	}
@@ -351,10 +352,10 @@ void HistoryWin::importList(char *fileName) {
 		std::string line;
 
 		while (std::getline(input, line)) {
-			std::vector<size_t> currentstep;
-			currentstep = std::vector<size_t>();
+			std::vector<boost::multiprecision::uint128_t> currentstep;
+			currentstep = std::vector<boost::multiprecision::uint128_t>();
 
-			size_t covering;
+			boost::multiprecision::uint128_t covering;
 			float time;
 			std::istringstream is(line);
 
@@ -385,7 +386,7 @@ void HistoryWin::importList(char *fileName) {
 void HistoryWin::UpdateCoveringfromList() {
 	for (int i = 0;i < nb_Facets;i++) {
 		Facet *f = geom->GetFacet(i);
-		f->facetHitCache.hit.covering = pointintime_list.back().second[i];
+		f->facetHitCache.covering = pointintime_list.back().second[i];
 	}
 	worker->simuTime = pointintime_list.back().first / (float)1000.0;
 }

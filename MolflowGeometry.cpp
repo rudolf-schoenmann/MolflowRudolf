@@ -842,18 +842,18 @@ void MolflowGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version, W
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	worker->globalHitCache.globalHits.hit.nbMCHit = file->ReadLLong();
-	worker->globalHitCache.globalHits.hit.nbHitEquiv = static_cast<double>(worker->globalHitCache.globalHits.hit.nbMCHit);
+	worker->globalHitCache.globalHits.nbMCHit = file->ReadLLong();
+	worker->globalHitCache.globalHits.nbHitEquiv = static_cast<double>(worker->globalHitCache.globalHits.nbMCHit);
 
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	worker->globalHitCache.globalHits.hit.nbDesorbed = file->ReadLLong();
+	worker->globalHitCache.globalHits.nbDesorbed = file->ReadLLong();
 
 	file->ReadKeyword("totalLeak"); file->ReadKeyword(":");
 	worker->globalHitCache.nbLeakTotal = file->ReadLLong();
 
 	if (*version >= 12) {
 		file->ReadKeyword("totalAbs"); file->ReadKeyword(":");
-		worker->globalHitCache.globalHits.hit.nbAbsEquiv = (double)file->ReadLLong();
+		worker->globalHitCache.globalHits.nbAbsEquiv = (double)file->ReadLLong();
 		if (*version >= 15) {
 			file->ReadKeyword("totalDist_total");
 		}
@@ -868,7 +868,7 @@ void MolflowGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version, W
 		}
 	}
 	else {
-		worker->globalHitCache.globalHits.hit.nbAbsEquiv = 0.0;
+		worker->globalHitCache.globalHits.nbAbsEquiv = 0.0;
 		worker->globalHitCache.distTraveled_total = 0.0;
 		worker->globalHitCache.distTraveledTotal_fullHitsOnly = 0.0;
 	}
@@ -1136,15 +1136,15 @@ void MolflowGeometry::LoadSYN(FileReader *file, GLProgress *prg, int *version, W
 		throw Error(errMsg);
 	}
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	worker->globalHitCache.globalHits.hit.nbMCHit = 0;
-	worker->globalHitCache.globalHits.hit.nbHitEquiv = 0.0;
+	worker->globalHitCache.globalHits.nbMCHit = 0;
+	worker->globalHitCache.globalHits.nbHitEquiv = 0.0;
 	file->ReadLLong();
 	if (*version >= 10) {
 		file->ReadKeyword("totalHitEquiv"); file->ReadKeyword(":");
 		file->ReadDouble();
 	}
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	worker->globalHitCache.globalHits.hit.nbDesorbed = 0; file->ReadLLong();
+	worker->globalHitCache.globalHits.nbDesorbed = 0; file->ReadLLong();
 	if (*version >= 6) {
 		file->ReadKeyword("no_scans"); file->ReadKeyword(":");
 		/*loaded_no_scans = */file->ReadDouble();
@@ -1374,9 +1374,9 @@ bool MolflowGeometry::LoadTexturesGEO(FileReader *file, GLProgress *prg, Datapor
 		BYTE *buffer = (BYTE *)dpHit->buff;
 		GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
 
-		/*gHits->globalHits.hit.nbMCHit = loaded_nbMCHit;
-		gHits->globalHits.hit.nbDesorbed = loaded_nbDesorption;
-		gHits->globalHits.hit.nbAbsEquiv = loaded_nbAbsEquiv;
+		/*gHits->globalHits.nbMCHit = loaded_nbMCHit;
+		gHits->globalHits.nbDesorbed = loaded_nbDesorption;
+		gHits->globalHits.nbAbsEquiv = loaded_nbAbsEquiv;
 		gHits->nbLeakTotal = loaded_nbLeak;
 		gHits->distTraveled_total = distTraveled_total;
 
@@ -1528,8 +1528,8 @@ void MolflowGeometry::SaveGEO(FileWriter *file, GLProgress *prg, Dataport *dpHit
 	/*switch(gHits->mode) {
 
 	case MC_MODE:
-	if( gHits->globalHits.hit.nbDesorbed>0 ) {
-	dCoef = (float)totalOutgassing / (float)gHits->globalHits.hit.nbDesorbed / 8.31 * wp.gasMass / 100;
+	if( gHits->globalHits.nbDesorbed>0 ) {
+	dCoef = (float)totalOutgassing / (float)gHits->globalHits.nbDesorbed / 8.31 * wp.gasMass / 100;
 	texMinAutoscale = gHits->minHit * dCoef;
 	texMaxAutoscale = gHits->maxHit * dCoef;
 	} else {
@@ -1547,10 +1547,10 @@ void MolflowGeometry::SaveGEO(FileWriter *file, GLProgress *prg, Dataport *dpHit
 
 	prg->SetMessage("Writing geometry details...");
 	file->Write("version:"); file->Write(GEOVERSION, "\n");
-	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.nbMCHit : 0, "\n");
-	file->Write("totalDes:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.nbDesorbed : 0, "\n");
+	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.nbMCHit : 0, "\n");
+	file->Write("totalDes:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.nbDesorbed : 0, "\n");
 	file->Write("totalLeak:"); file->Write((!crashSave && !saveSelected) ? gHits->nbLeakTotal : 0, "\n");
-	file->Write("totalAbs:"); file->Write((!crashSave && !saveSelected) ? (llong)gHits->globalHits.hit.nbAbsEquiv : 0, "\n");
+	file->Write("totalAbs:"); file->Write((!crashSave && !saveSelected) ? (llong)gHits->globalHits.nbAbsEquiv : 0, "\n");
 	file->Write("totalDist_total:"); file->Write((!crashSave && !saveSelected) ? gHits->distTraveled_total : 0, "\n");
 	file->Write("totalDist_fullHitsOnly:"); file->Write((!crashSave && !saveSelected) ? gHits->distTraveledTotal_fullHitsOnly : 0, "\n");
 	file->Write("maxDes:"); file->Write((!crashSave && !saveSelected) ? worker->ontheflyParams.desorptionLimit : 0, "\n");
@@ -1788,10 +1788,10 @@ void MolflowGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, bool saveSelect
 	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
 
 	// Unused
-	file->Write(gHits->globalHits.hit.nbMCHit, "\n");
+	file->Write(gHits->globalHits.nbMCHit, "\n");
 	file->Write(gHits->nbLeakTotal, "\n");
 
-	file->Write(gHits->globalHits.hit.nbDesorbed, "\n");
+	file->Write(gHits->globalHits.nbDesorbed, "\n");
 	file->Write(0, "\n"); //Desorption limit
 
 	file->Write(sh.nbVertex, "\n");
@@ -2039,7 +2039,7 @@ void MolflowGeometry::ExportProfiles(FILE *file, int isTXT, Dataport *dpHit, Wor
 				std::ostringstream line;
 
 				line << i + 1 << sep << profType[f->sh.profileType] << sep << f->sh.O.x << sep << f->sh.O.y << sep << f->sh.O.z << sep << f->sh.U.x << sep << f->sh.U.y << sep << f->sh.U.z << sep;
-				line << f->sh.V.x << sep << f->sh.V.y << sep << f->sh.V.z << sep << f->sh.U.Norme() << sep << f->sh.V.Norme() << sep << f->sh.center.x << sep << f->sh.center.y << sep << f->sh.center.z << sep << f->sh.maxSpeed << sep << f->facetHitCache.hit.nbMCHit << sep << f->facetHitCache.hit.nbHitEquiv << sep;
+				line << f->sh.V.x << sep << f->sh.V.y << sep << f->sh.V.z << sep << f->sh.U.Norme() << sep << f->sh.V.Norme() << sep << f->sh.center.x << sep << f->sh.center.y << sep << f->sh.center.z << sep << f->sh.maxSpeed << sep << f->facetHitCache.nbMCHit << sep << f->facetHitCache.nbHitEquiv << sep;
 
 				if (f->sh.isProfile) {
 
@@ -2047,7 +2047,7 @@ void MolflowGeometry::ExportProfiles(FILE *file, int isTXT, Dataport *dpHit, Wor
 					if (!buffer) return;
 
 					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
-					double nbDes = (shGHit->globalHits.hit.nbDesorbed > 0) ? (double)shGHit->globalHits.hit.nbDesorbed : 1.0;
+					double nbDes = (shGHit->globalHits.nbDesorbed > 0) ? (double)shGHit->globalHits.nbDesorbed : 1.0;
 					size_t profOffset = PROFILE_SIZE*sizeof(ProfileSlice)*m;
 					prof = (ProfileSlice*)((BYTE *)buffer + (f->sh.hitOffset + facetHitsSize + profOffset));
 					double scaleX, scaleY;
@@ -2065,12 +2065,12 @@ void MolflowGeometry::ExportProfiles(FILE *file, int isTXT, Dataport *dpHit, Wor
 					case PROFILE_TAN_VELOCITY:
 						scaleX = f->sh.maxSpeed / (double)PROFILE_SIZE;
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							line << prof[j].countEquiv / (f->facetHitCache.hit.nbHitEquiv + static_cast<double>(f->facetHitCache.hit.nbDesorbed))  << sep;
+							line << prof[j].countEquiv / (f->facetHitCache.nbHitEquiv + static_cast<double>(f->facetHitCache.nbDesorbed))  << sep;
 						break;
 					case PROFILE_ANGULAR:
 						scaleX = 90.0 / (double)PROFILE_SIZE;
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							line << prof[j].countEquiv / (f->facetHitCache.hit.nbHitEquiv + static_cast<double>(f->facetHitCache.hit.nbDesorbed)) << sep;
+							line << prof[j].countEquiv / (f->facetHitCache.nbHitEquiv + static_cast<double>(f->facetHitCache.nbDesorbed)) << sep;
 						break;
 					}
 				}
@@ -2614,10 +2614,10 @@ bool MolflowGeometry::SaveXML_simustate(xml_node saveDoc, Worker *work, BYTE *bu
 			xml_node globalNode = newMoment.append_child("Global");
 
 			xml_node hitsNode = globalNode.append_child("Hits");
-			hitsNode.append_attribute("totalHit") = gHits->globalHits.hit.nbMCHit;
-			hitsNode.append_attribute("totalHitEquiv") = gHits->globalHits.hit.nbHitEquiv;
-			hitsNode.append_attribute("totalDes") = gHits->globalHits.hit.nbDesorbed;
-			hitsNode.append_attribute("totalAbsEquiv") = gHits->globalHits.hit.nbAbsEquiv;
+			hitsNode.append_attribute("totalHit") = gHits->globalHits.nbMCHit;
+			hitsNode.append_attribute("totalHitEquiv") = gHits->globalHits.nbHitEquiv;
+			hitsNode.append_attribute("totalDes") = gHits->globalHits.nbDesorbed;
+			hitsNode.append_attribute("totalAbsEquiv") = gHits->globalHits.nbAbsEquiv;
 			hitsNode.append_attribute("totalDist_total") = gHits->distTraveled_total;
 			hitsNode.append_attribute("totalDist_fullHitsOnly") = gHits->distTraveledTotal_fullHitsOnly;
 			hitsNode.append_attribute("totalLeak") = gHits->nbLeakTotal;
@@ -2658,14 +2658,14 @@ bool MolflowGeometry::SaveXML_simustate(xml_node saveDoc, Worker *work, BYTE *bu
 			
 			xml_node facetHitNode = newFacetResult.append_child("Hits");
 			FacetHitBuffer* facetCounter = (FacetHitBuffer *)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-			facetHitNode.append_attribute("nbHit") = facetCounter->hit.nbMCHit;
-			facetHitNode.append_attribute("nbHitEquiv") = facetCounter->hit.nbHitEquiv;
-			facetHitNode.append_attribute("nbDes") = facetCounter->hit.nbDesorbed;
-			facetHitNode.append_attribute("nbAbsEquiv") = facetCounter->hit.nbAbsEquiv;
-			facetHitNode.append_attribute("sum_v_ort") = facetCounter->hit.sum_v_ort;
-			facetHitNode.append_attribute("sum_1_per_v") = facetCounter->hit.sum_1_per_ort_velocity;
-			facetHitNode.append_attribute("sum_v") = facetCounter->hit.sum_1_per_velocity;
-			facetHitNode.append_attribute("covering") = facetCounter->hit.covering;
+			facetHitNode.append_attribute("nbHit") = facetCounter->nbMCHit;
+			facetHitNode.append_attribute("nbHitEquiv") = facetCounter->nbHitEquiv;
+			facetHitNode.append_attribute("nbDes") = facetCounter->nbDesorbed;
+			facetHitNode.append_attribute("nbAbsEquiv") = facetCounter->nbAbsEquiv;
+			facetHitNode.append_attribute("sum_v_ort") = facetCounter->sum_v_ort;
+			facetHitNode.append_attribute("sum_1_per_v") = facetCounter->sum_1_per_ort_velocity;
+			facetHitNode.append_attribute("sum_v") = facetCounter->sum_1_per_velocity;
+			facetHitNode.append_attribute("covering") = facetCounter->covering.convert_to<llong>();
 
 			if (f->sh.isProfile){
 				xml_node profileNode = newFacetResult.append_child("Profile");
@@ -3173,21 +3173,21 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 		if (m == 0) { //read global results
 			xml_node globalNode = newMoment.child("Global");
 			xml_node hitsNode = globalNode.child("Hits");
-			work->globalHitCache.globalHits.hit.nbMCHit = hitsNode.attribute("totalHit").as_llong();
+			work->globalHitCache.globalHits.nbMCHit = hitsNode.attribute("totalHit").as_llong();
 			if (hitsNode.attribute("totalHitEquiv")) {
-				work->globalHitCache.globalHits.hit.nbHitEquiv = hitsNode.attribute("totalHitEquiv").as_double();
+				work->globalHitCache.globalHits.nbHitEquiv = hitsNode.attribute("totalHitEquiv").as_double();
 			}
 			else {
 				//Backward compatibility
-				work->globalHitCache.globalHits.hit.nbHitEquiv = static_cast<double>(work->globalHitCache.globalHits.hit.nbMCHit);
+				work->globalHitCache.globalHits.nbHitEquiv = static_cast<double>(work->globalHitCache.globalHits.nbMCHit);
 			}
-			work->globalHitCache.globalHits.hit.nbDesorbed = hitsNode.attribute("totalDes").as_llong();
+			work->globalHitCache.globalHits.nbDesorbed = hitsNode.attribute("totalDes").as_llong();
 			if (hitsNode.attribute("totalAbsEquiv")) {
-				work->globalHitCache.globalHits.hit.nbAbsEquiv = hitsNode.attribute("totalAbsEquiv").as_double();
+				work->globalHitCache.globalHits.nbAbsEquiv = hitsNode.attribute("totalAbsEquiv").as_double();
 			}
 			else {
 				//Backward compatibility
-				work->globalHitCache.globalHits.hit.nbAbsEquiv = hitsNode.attribute("totalAbs").as_double();
+				work->globalHitCache.globalHits.nbAbsEquiv = hitsNode.attribute("totalAbs").as_double();
 			}
 			if (hitsNode.attribute("totalDist_total")) { //if it's in the new format where total/partial are separated
 				work->globalHitCache.distTraveled_total = hitsNode.attribute("totalDist_total").as_double();
@@ -3233,53 +3233,59 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 			FacetHitBuffer* facetCounter = (FacetHitBuffer *)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
 			if (facetHitNode) { //If there are hit results for the current moment	
-				facetCounter->hit.nbMCHit = facetHitNode.attribute("nbHit").as_llong();
+				facetCounter->nbMCHit = facetHitNode.attribute("nbHit").as_llong();
 				if (facetHitNode.attribute("nbHitEquiv")) {
-					facetCounter->hit.nbHitEquiv = facetHitNode.attribute("nbHitEquiv").as_double();
+					facetCounter->nbHitEquiv = facetHitNode.attribute("nbHitEquiv").as_double();
 				}
 				else {
 					//Backward compatibility
-					facetCounter->hit.nbHitEquiv = static_cast<double>(facetCounter->hit.nbMCHit);
+					facetCounter->nbHitEquiv = static_cast<double>(facetCounter->nbMCHit);
 				}
-				facetCounter->hit.nbDesorbed = facetHitNode.attribute("nbDes").as_llong();
+				facetCounter->nbDesorbed = facetHitNode.attribute("nbDes").as_llong();
 				if (facetHitNode.attribute("nbAbsEquiv")) {
-					facetCounter->hit.nbAbsEquiv = facetHitNode.attribute("nbAbsEquiv").as_double();
+					facetCounter->nbAbsEquiv = facetHitNode.attribute("nbAbsEquiv").as_double();
 				}
 				else {
 					//Backward compatibility
-					facetCounter->hit.nbAbsEquiv = facetHitNode.attribute("nbAbs").as_double();
+					facetCounter->nbAbsEquiv = facetHitNode.attribute("nbAbs").as_double();
 				}
-				facetCounter->hit.sum_v_ort = facetHitNode.attribute("sum_v_ort").as_double();
-				facetCounter->hit.sum_1_per_ort_velocity = facetHitNode.attribute("sum_1_per_v").as_double();
+				facetCounter->sum_v_ort = facetHitNode.attribute("sum_v_ort").as_double();
+				facetCounter->sum_1_per_ort_velocity = facetHitNode.attribute("sum_1_per_v").as_double();
 				if (facetHitNode.attribute("sum_v")) {
-					facetCounter->hit.sum_1_per_velocity = facetHitNode.attribute("sum_v").as_double();
+					facetCounter->sum_1_per_velocity = facetHitNode.attribute("sum_v").as_double();
 				}
 				else {
 					//Backward compatibility
-					facetCounter->hit.sum_1_per_velocity = 4.0 * Sqr(facetCounter->hit.nbHitEquiv + static_cast<double>(facetCounter->hit.nbDesorbed))/ facetCounter->hit.sum_1_per_ort_velocity;
+					facetCounter->sum_1_per_velocity = 4.0 * Sqr(facetCounter->nbHitEquiv + static_cast<double>(facetCounter->nbDesorbed))/ facetCounter->sum_1_per_ort_velocity;
 				}
 				if (facetHitNode.attribute("covering")) {
-					facetCounter->hit.covering = facetHitNode.attribute("covering").as_llong();
+					facetCounter->covering = boost::multiprecision::uint128_t(facetHitNode.attribute("covering").as_llong());
 				}
 				/*
 				else {//Was soll das? Das gibt doch keinen Sinn!
-					facetCounter->hit.covering = facetCounter->hit.nbAbsEquiv*updatecovering(f, work);
+					facetCounter->covering = facetCounter->nbAbsEquiv*updatecovering(f, work);
 				}*/
 
 				if (work->displayedMoment == m) { //For immediate display in facet hits list and facet counter
-					f->facetHitCache.hit = facetCounter->hit;
+					f->facetHitCache.nbMCHit = facetCounter->nbMCHit;
+					f->facetHitCache.nbDesorbed = facetCounter->nbDesorbed;
+					f->facetHitCache.nbAbsEquiv = facetCounter->nbAbsEquiv;
+					f->facetHitCache.nbHitEquiv = facetCounter->nbHitEquiv;
+					f->facetHitCache.sum_1_per_ort_velocity = facetCounter->sum_1_per_ort_velocity;
+					f->facetHitCache.sum_1_per_velocity = facetCounter->sum_1_per_velocity;
+					f->facetHitCache.sum_v_ort = facetCounter->sum_v_ort;
+					f->facetHitCache.covering = facetCounter->covering;
 				}
 			}
 			else { //No hit information, so set to 0
-				facetCounter->hit.nbMCHit =
-				facetCounter->hit.nbDesorbed =
-				facetCounter->hit.covering =
-				0;
-				facetCounter->hit.sum_v_ort = 
-				facetCounter->hit.nbHitEquiv =
-				facetCounter->hit.sum_1_per_ort_velocity =
-				facetCounter->hit.sum_1_per_velocity =
-				facetCounter->hit.nbAbsEquiv =
+				facetCounter->nbMCHit =
+				facetCounter->nbDesorbed = 0;
+				facetCounter->covering = boost::multiprecision::uint128_t(0);
+				facetCounter->sum_v_ort = 
+				facetCounter->nbHitEquiv =
+				facetCounter->sum_1_per_ort_velocity =
+				facetCounter->sum_1_per_velocity =
+				facetCounter->nbAbsEquiv =
 				0.0;
 			}
 

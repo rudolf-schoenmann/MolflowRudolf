@@ -245,12 +245,12 @@ void TimewisePlotter::refreshViews() {
 		Facet *f = geom->GetFacet(profCombo->GetUserValueAt(idx));
 		v->Reset();
 		//FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->wp.hitOffset);
-		//double fnbHit = (double)fCount->hit.nbMCHit;
+		//double fnbHit = (double)fCount->nbMCHit;
 		/*int momentIndex;
 		if (m==(nbView-1) && constantFlowToggle->GetState()) momentIndex=0; //Constant flow
 		else momentIndex=m+1; //any other 'normal' moment*/
 		ProfileSlice *profilePtr = (ProfileSlice *)(buffer + f->sh.hitOffset + facetHitsSize + v->userData1*sizeof(ProfileSlice)*PROFILE_SIZE);
-		if (worker->globalHitCache.globalHits.hit.nbDesorbed > 0) {
+		if (worker->globalHitCache.globalHits.nbDesorbed > 0) {
 			switch (displayMode) {
 			case 0: //Raw data
 				for (int j = 0; j < PROFILE_SIZE; j++)

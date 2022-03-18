@@ -942,18 +942,18 @@ void Worker::Update(float appTime) {
 				SHGHITS *gHits = (SHGHITS *)buffer;
 
 				// Copy Global hits and leaks
-				nbMCHit = gHits->globalHits.hit.nbMCHit;
-				nbAbsEquiv = gHits->globalHits.hit.nbAbsEquiv;
-				nbDesorption = gHits->globalHits.hit.nbDesorbed;				
-				distTraveled_total = gHits->distTraveled_total;
-				distTraveledTotal_fullHitsOnly = gHits->distTraveledTotal_fullHitsOnly;
+				nbMCHit = globalHitCache.globalHits.nbMCHit;
+				nbAbsEquiv = globalHitCache.globalHits.nbAbsEquiv;
+				nbDesorption = globalHitCache.globalHits.nbDesorbed;				
+				distTraveled_total = globalHitCache.distTraveled_total;
+				distTraveledTotal_fullHitsOnly = globalHitCache.distTraveledTotal_fullHitsOnly;
 				
 
-				nbLeakTotal = gHits->nbLeakTotal;
-				hitCacheSize = gHits->hitCacheSize;
-				memcpy(hitCache, gHits->hitCache, sizeof(HIT)*hitCacheSize);
-				leakCacheSize = gHits->leakCacheSize;
-				memcpy(leakCache, gHits->leakCache, sizeof(LEAK)*leakCacheSize); //will display only first leakCacheSize leaks
+				nbLeakTotal = globalHitCache.nbLeakTotal;
+				hitCacheSize = globalHitCache.hitCacheSize;
+				memcpy(hitCache, globalHitCache.hitCache, sizeof(HIT)*hitCacheSize);
+				leakCacheSize = globalHitCache.leakCacheSize;
+				memcpy(leakCache, globalHitCache.leakCache, sizeof(LEAK)*leakCacheSize); //will display only first leakCacheSize leaks
 
 				// Refresh local facet hit cache for the displayed moment
 				int nbFacet = geom->GetNbFacet();
@@ -1135,10 +1135,10 @@ void Worker::RealReload() { //Sharing geometry with workers
 		size_t nbFacet = geom->GetNbFacet();
 		for (int i = 0; i < nbFacet; i++) {
 			Facet *f = geom->GetFacet(i);
-			llong covering;
-			covering = f->facetHitCache.hit.covering;
+			boost::multiprecision::uint128_t covering;
+			covering = f->facetHitCache.covering;
 			FacetHitBuffer *facetHitBuffer = (FacetHitBuffer *)(hitbuffer + f->sh.hitOffset);
-			facetHitBuffer->hit.covering = covering;
+			facetHitBuffer->covering = covering;
 		}
 	}
 	ReleaseDataport(dpHit);
@@ -1212,7 +1212,176 @@ void Worker::ClearHits(bool noReload) {
 	}
 	if (dpHit) {
 		AccessDataport(dpHit);
-		memset(dpHit->buff, 0, geom->GetHitsSize(&moments)); //Also clears hits, leaks
+
+		//memset(dpHit->buff, 0, geom->GetHitsSize(&moments)); //Also clears hits, leaks
+
+		BYTE* buffer = (BYTE*)dpHit->buff;
+		GlobalHitBuffer* gHits = (GlobalHitBuffer*)buffer;
+
+		gHits->globalHits.nbMCHit = 0;
+		gHits->globalHits.nbHitEquiv = 0.0;
+		gHits->globalHits.nbAbsEquiv = 0.0;
+		gHits->globalHits.nbDesorbed = 0;
+		gHits->globalHits.sum_1_per_ort_velocity = 0;
+		gHits->globalHits.sum_1_per_velocity = 0;
+		gHits->globalHits.sum_v_ort = 0;
+		gHits->globalHits.covering = boost::multiprecision::uint128_t(0);
+		gHits->hitCacheSize = 0;
+		gHits->lastHitIndex = 0;
+		for (size_t i = 0; i < HITCACHESIZE; i++) {
+			gHits->hitCache[i].pos.x = 0.0;
+			gHits->hitCache[i].pos.y = 0.0;
+			gHits->hitCache[i].pos.z = 0.0;
+			gHits->hitCache[i].type = 0;
+		}
+		for (size_t i = 0; i < LEAKCACHESIZE; i++) {
+			gHits->leakCache[i].dir.x = 0.0;
+			gHits->leakCache[i].dir.y = 0.0;
+			gHits->leakCache[i].dir.z = 0.0;
+			gHits->leakCache[i].pos.x = 0.0;
+			gHits->leakCache[i].pos.y = 0.0;
+			gHits->leakCache[i].pos.z = 0.0;
+		}
+		gHits->lastLeakIndex = 0;
+		gHits->leakCacheSize = 0;
+		gHits->nbLeakTotal = 0;
+		for (size_t i = 0; i < 3; i++) {
+			gHits->texture_limits[i].max.all = 0.0;
+			gHits->texture_limits[i].max.moments_only = 0.0;
+			gHits->texture_limits[i].min.all = 0.0;
+			gHits->texture_limits[i].min.moments_only = 0.0;
+		}
+		gHits->distTraveled_total = 0.0;
+		gHits->distTraveledTotal_fullHitsOnly = 0.0;
+
+		size_t nbMoments = moments.size();
+
+		for (unsigned int m = 0; m < (1 + nbMoments); m++) {
+			BYTE* histCurrentMoment = buffer + sizeof(GlobalHitBuffer) + m * wp.globalHistogramParams.GetDataSize();
+
+			double* nbHitsHistogram = (double*)histCurrentMoment;
+			double* distanceHistogram = (double*)(histCurrentMoment + wp.globalHistogramParams.GetBouncesDataSize());
+			double* timeHistogram = (double*)(histCurrentMoment + wp.globalHistogramParams.GetBouncesDataSize() + wp.globalHistogramParams.GetDistanceDataSize());
+
+			if (wp.globalHistogramParams.recordBounce) {
+				for (size_t i = 0; i < wp.globalHistogramParams.GetBounceHistogramSize(); i++) {
+					nbHitsHistogram[i] = 0.0;
+				}
+			}
+
+			if (wp.globalHistogramParams.recordDistance) {
+				for (size_t i = 0; i < (wp.globalHistogramParams.GetDistanceHistogramSize()); i++) {
+					distanceHistogram[i] = 0.0;
+				}
+			}
+
+			if (wp.globalHistogramParams.recordTime) {
+				for (size_t i = 0; i < (wp.globalHistogramParams.GetTimeHistogramSize()); i++) {
+					timeHistogram[i] = 0.0;
+				}
+			}
+		}
+
+		size_t facetHitsSize = (1 + nbMoments) * sizeof(FacetHitBuffer);
+		int j, x, y, s;
+
+		size_t nbFacet = geom->GetNbFacet();
+
+		for (size_t i = 0; i < nbFacet; i++) {
+			Facet* f = geom->GetFacet(i);
+
+			for (unsigned int m = 0; m < (1 + nbMoments); m++) {
+				FacetHitBuffer* facetHitBuffer = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
+				facetHitBuffer->nbAbsEquiv = 0.0;
+				facetHitBuffer->nbDesorbed = 0;
+				facetHitBuffer->nbMCHit = 0;
+				facetHitBuffer->nbHitEquiv = 0.0;
+				facetHitBuffer->sum_1_per_ort_velocity = 0.0;
+				facetHitBuffer->sum_v_ort = 0.0;
+				facetHitBuffer->sum_1_per_velocity = 0.0;
+				facetHitBuffer->covering = boost::multiprecision::uint128_t(0);
+			}
+
+			size_t profileSize(PROFILE_SIZE * sizeof(ProfileSlice));
+			if (f->sh.isProfile) {
+				for (unsigned int m = 0; m < (1 + nbMoments); m++) {
+					ProfileSlice* shProfile = (ProfileSlice*)(buffer + f->sh.hitOffset + facetHitsSize + m * profileSize);
+					for (j = 0; j < (int)PROFILE_SIZE; j++) {
+						shProfile[j].countEquiv = 0.0; shProfile[j].sum_1_per_ort_velocity = 0.0; shProfile[j].sum_v_ort = 0.0;
+					}
+				}
+			}
+
+			size_t textureSize = f->sh.texWidth * f->sh.texHeight * sizeof(TextureCell);
+			if (f->sh.isTextured) {
+				for (unsigned int m = 0; m < (1 + nbMoments); m++) {
+					TextureCell* shTexture = (TextureCell*)(buffer + (f->sh.hitOffset + facetHitsSize + profileSize * (1 + nbMoments) + m * textureSize));
+
+					for (y = 0; y < (int)f->sh.texHeight; y++) {
+						for (x = 0; x < (int)f->sh.texWidth; x++) {
+							size_t add = x + y * f->sh.texWidth;
+							shTexture[add].countEquiv = 0.0;
+							shTexture[add].sum_1_per_ort_velocity = 0.0;
+							shTexture[add].sum_v_ort_per_area = 0.0;
+
+						}
+					}
+				}
+			}
+
+			size_t directionSize = f->sh.texWidth * f->sh.texHeight * sizeof(DirectionCell);
+			if (f->sh.countDirection) {
+				for (unsigned int m = 0; m < (1 + nbMoments); m++) {
+					DirectionCell* shDir = (DirectionCell*)(buffer + (f->sh.hitOffset + facetHitsSize + profileSize * (1 + nbMoments) + textureSize * (1 + nbMoments) + directionSize * m));
+					for (y = 0; y < (int)f->sh.texHeight; y++) {
+						for (x = 0; x < (int)f->sh.texWidth; x++) {
+							size_t add = x + y * f->sh.texWidth;
+							shDir[add].dir.x = 0.0;
+							shDir[add].dir.y = 0.0;
+							shDir[add].dir.z = 0.0;
+							shDir[add].count = 0;
+						}
+					}
+				}
+			}
+
+			if (f->sh.anglemapParams.record) {
+				size_t* shAngleMap = (size_t*)(buffer + f->sh.hitOffset + facetHitsSize + profileSize * (1 + nbMoments) + textureSize * (1 + nbMoments) + directionSize * (1 + nbMoments));
+				for (y = 0; y < (int)(f->sh.anglemapParams.thetaLowerRes + f->sh.anglemapParams.thetaHigherRes); y++) {
+					for (x = 0; x < (int)f->sh.anglemapParams.phiWidth; x++) {
+						size_t add = x + y * f->sh.anglemapParams.phiWidth;
+						shAngleMap[add] = 0;
+					}
+				}
+			}
+
+			for (unsigned int m = 0; m < (1 + nbMoments); m++) {
+				BYTE* histCurrentMoment = buffer + f->sh.hitOffset + facetHitsSize + profileSize * (1 + nbMoments) + textureSize * (1 + nbMoments) + directionSize * (1 + nbMoments) + f->sh.anglemapParams.GetRecordedDataSize() + m * f->sh.facetHistogramParams.GetDataSize();
+
+				if (f->sh.facetHistogramParams.recordBounce) {
+					double* nbHitsHistogram = (double*)histCurrentMoment;
+					for (size_t i = 0; i < f->sh.facetHistogramParams.GetBounceHistogramSize(); i++) {
+						nbHitsHistogram[i] = 0.0;
+					}
+				}
+
+				if (f->sh.facetHistogramParams.recordDistance) {
+					double* distanceHistogram = (double*)(histCurrentMoment + f->sh.facetHistogramParams.GetBouncesDataSize());
+					for (size_t i = 0; i < (f->sh.facetHistogramParams.GetDistanceHistogramSize()); i++) {
+						distanceHistogram[i] = 0.0;
+					}
+				}
+
+				if (f->sh.facetHistogramParams.recordTime) {
+					double* timeHistogram = (double*)(histCurrentMoment + f->sh.facetHistogramParams.GetBouncesDataSize() + f->sh.facetHistogramParams.GetDistanceDataSize());
+					for (size_t i = 0; i < (f->sh.facetHistogramParams.GetTimeHistogramSize()); i++) {
+						timeHistogram[i] = 0.0;
+					}
+				}
+
+			}
+		}
+
 		ReleaseDataport(dpHit);
 	}
 
@@ -1220,9 +1389,42 @@ void Worker::ClearHits(bool noReload) {
 
 void Worker::ResetWorkerStats() {
 
-	memset(&globalHitCache, 0, sizeof(GlobalHitBuffer));
-
-
+	//memset(&globalHitCache, 0, sizeof(GlobalHitBuffer));
+	globalHitCache.globalHits.nbMCHit = 0;
+	globalHitCache.globalHits.nbHitEquiv = 0.0;
+	globalHitCache.globalHits.nbAbsEquiv = 0.0;
+	globalHitCache.globalHits.nbDesorbed = 0;
+	globalHitCache.globalHits.sum_1_per_ort_velocity = 0;
+	globalHitCache.globalHits.sum_1_per_velocity = 0;
+	globalHitCache.globalHits.sum_v_ort = 0;
+	globalHitCache.globalHits.covering = boost::multiprecision::uint128_t(0);
+	globalHitCache.hitCacheSize = 0;
+	globalHitCache.lastHitIndex = 0;
+	for (size_t i = 0; i < HITCACHESIZE; i++) {
+		globalHitCache.hitCache[i].pos.x = 0.0;
+		globalHitCache.hitCache[i].pos.y = 0.0;
+		globalHitCache.hitCache[i].pos.z = 0.0;
+		globalHitCache.hitCache[i].type = 0;
+	}
+	for (size_t i = 0; i < LEAKCACHESIZE; i++) {
+		globalHitCache.leakCache[i].dir.x = 0.0;
+		globalHitCache.leakCache[i].dir.y = 0.0;
+		globalHitCache.leakCache[i].dir.z = 0.0;
+		globalHitCache.leakCache[i].pos.x = 0.0;
+		globalHitCache.leakCache[i].pos.y = 0.0;
+		globalHitCache.leakCache[i].pos.z = 0.0;
+	}
+	globalHitCache.lastLeakIndex = 0;
+	globalHitCache.leakCacheSize = 0;
+	globalHitCache.nbLeakTotal = 0;
+	for (size_t i = 0; i < 3; i++) {
+		globalHitCache.texture_limits[i].max.all = 0.0;
+		globalHitCache.texture_limits[i].max.moments_only = 0.0;
+		globalHitCache.texture_limits[i].min.all = 0.0;
+		globalHitCache.texture_limits[i].min.moments_only = 0.0;
+	}
+	globalHitCache.distTraveled_total = 0.0;
+	globalHitCache.distTraveledTotal_fullHitsOnly = 0.0;
 }
 
 void Worker::Start() {
@@ -1299,16 +1501,16 @@ void Worker::ResetMoments() {
 double Worker::GetMoleculesPerTP(size_t moment)
 //Returns how many physical molecules one test particle represents
 {
-	if (globalHitCache.globalHits.hit.nbDesorbed == 0) return 0; //avoid division by 0
+	if (globalHitCache.globalHits.nbDesorbed == 0) return 0; //avoid division by 0
 	if (moment == 0) {
 		//Constant flow
 		//Each test particle represents a certain real molecule influx per second
-		return wp.finalOutgassingRate / globalHitCache.globalHits.hit.nbDesorbed;
+		return wp.finalOutgassingRate / globalHitCache.globalHits.nbDesorbed;
 	}
 	else {
 		//Time-dependent mode
 		//Each test particle represents a certain absolute number of real molecules
-		return (wp.totalDesorbedMolecules / wp.timeWindowSize) / globalHitCache.globalHits.hit.nbDesorbed;
+		return (wp.totalDesorbedMolecules / wp.timeWindowSize) / globalHitCache.globalHits.nbDesorbed;
 	}
 }
 

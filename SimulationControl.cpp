@@ -533,6 +533,7 @@ void UpdateHits(Dataport *dpHit, Dataport* dpLog,int prIdx, DWORD timeout) {
 }
 
 size_t GetHitsSize() {
+
 	return sizeof(GlobalHitBuffer) + sHandle->wp.globalHistogramParams.GetDataSize() +
 		sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize + sHandle->angleMapTotalSize + sHandle->histogramTotalSize
 		+ sHandle->sh.nbFacet * sizeof(FacetHitBuffer) * (1+sHandle->moments.size());
@@ -541,8 +542,43 @@ size_t GetHitsSize() {
 void ResetTmpCounters() {
 	SetState(NULL, "Resetting local cache...", false, true);
 
-	memset(&sHandle->tmpGlobalResult, 0, sizeof(GlobalHitBuffer));
-	
+	//memset(&sHandle->tmpGlobalResult, 0, sizeof(GlobalHitBuffer));
+	sHandle->tmpGlobalResult.globalHits.nbMCHit = 0;
+	sHandle->tmpGlobalResult.globalHits.nbHitEquiv = 0.0;
+	sHandle->tmpGlobalResult.globalHits.nbAbsEquiv = 0.0;
+	sHandle->tmpGlobalResult.globalHits.nbDesorbed = 0;
+	sHandle->tmpGlobalResult.globalHits.sum_1_per_ort_velocity = 0;
+	sHandle->tmpGlobalResult.globalHits.sum_1_per_velocity = 0;
+	sHandle->tmpGlobalResult.globalHits.sum_v_ort = 0;
+	sHandle->tmpGlobalResult.globalHits.covering = boost::multiprecision::uint128_t(0);
+	sHandle->tmpGlobalResult.hitCacheSize = 0;
+	sHandle->tmpGlobalResult.lastHitIndex = 0;
+	for (size_t i = 0; i < HITCACHESIZE; i++) {
+		sHandle->tmpGlobalResult.hitCache[i].pos.x = 0.0;
+		sHandle->tmpGlobalResult.hitCache[i].pos.y = 0.0;
+		sHandle->tmpGlobalResult.hitCache[i].pos.z = 0.0;
+		sHandle->tmpGlobalResult.hitCache[i].type = 0;
+	}
+	for (size_t i = 0; i < LEAKCACHESIZE; i++) {
+		sHandle->tmpGlobalResult.leakCache[i].dir.x = 0.0;
+		sHandle->tmpGlobalResult.leakCache[i].dir.y = 0.0;
+		sHandle->tmpGlobalResult.leakCache[i].dir.z = 0.0;
+		sHandle->tmpGlobalResult.leakCache[i].pos.x = 0.0;
+		sHandle->tmpGlobalResult.leakCache[i].pos.y = 0.0;
+		sHandle->tmpGlobalResult.leakCache[i].pos.z = 0.0;
+	}
+	sHandle->tmpGlobalResult.lastLeakIndex = 0;
+	sHandle->tmpGlobalResult.leakCacheSize = 0;
+	sHandle->tmpGlobalResult.nbLeakTotal = 0;
+	for (size_t i = 0; i < 3; i++) {
+		sHandle->tmpGlobalResult.texture_limits[i].max.all = 0.0;
+		sHandle->tmpGlobalResult.texture_limits[i].max.moments_only = 0.0;
+		sHandle->tmpGlobalResult.texture_limits[i].min.all = 0.0;
+		sHandle->tmpGlobalResult.texture_limits[i].min.moments_only = 0.0;
+	}
+	sHandle->tmpGlobalResult.distTraveled_total = 0.0;
+	sHandle->tmpGlobalResult.distTraveledTotal_fullHitsOnly = 0.0;
+
 	//Reset global histograms
 	for (auto& h : sHandle->tmpGlobalHistograms) {
 		//Could use ZEROVECTOR as well

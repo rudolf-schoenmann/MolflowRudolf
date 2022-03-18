@@ -339,7 +339,7 @@ void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
 	char tmp[256];
 	int yScaleMode = yScaleCombo->GetSelectedIndex();
 	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
-	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
+	double nbDes = (double)gHits->globalHits.nbDesorbed;
 	double scaleY;
 	
 	switch (yScaleMode) {
@@ -349,7 +349,7 @@ void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
 			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
 
-			sprintf(tmp, "%g", (double)facetHits->hit.nbMCHit);
+			sprintf(tmp, "%g", (double)facetHits->nbMCHit);
 			historyList->SetValueAt(colnum + 1, m - 1, tmp);
 		}
 		break;
@@ -359,7 +359,7 @@ void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
 		for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
-			sprintf(tmp, "%g", facetHits->hit.nbHitEquiv);
+			sprintf(tmp, "%g", facetHits->nbHitEquiv);
 			historyList->SetValueAt(colnum + 1, m - 1, tmp);
 		}
 		break;
@@ -373,7 +373,7 @@ void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
 			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
 
-			sprintf(tmp, "%g", facetHits->hit.sum_v_ort*scaleY);
+			sprintf(tmp, "%g", facetHits->sum_v_ort*scaleY);
 			historyList->SetValueAt(colnum + 1, m - 1, tmp);
 		}
 		break;
@@ -387,7 +387,7 @@ void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
 			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
 
-			sprintf(tmp, "%g", facetHits->hit.sum_1_per_ort_velocity*scaleY);
+			sprintf(tmp, "%g", facetHits->sum_1_per_ort_velocity*scaleY);
 			historyList->SetValueAt(colnum + 1, m - 1, tmp);
 		}
 		break;
@@ -400,7 +400,7 @@ void PressureEvolution::updateList(BYTE *buffer, Facet *f, int colnum) {
 			FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
 
 
-			sprintf(tmp, "%g", facetHits->hit.nbHitEquiv*scaleY);
+			sprintf(tmp, "%g", facetHits->nbHitEquiv*scaleY);
 			historyList->SetValueAt(colnum + 1, m - 1, tmp);
 		}
 		break;
@@ -478,7 +478,7 @@ void PressureEvolution::refreshChart() {
 
 	Geometry *geom = worker->GetGeometry();
 	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
-	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
+	double nbDes = (double)gHits->globalHits.nbDesorbed;
 	double scaleY;
 	size_t facetHitsSize = (1 + worker->moments.size()) * sizeof(FacetHitBuffer);
 
@@ -492,14 +492,14 @@ void PressureEvolution::refreshChart() {
 			case 0: { //MC Hits
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-					v->Add(worker->moments[m - 1], (double)facetHits->hit.nbMCHit, false);
+					v->Add(worker->moments[m - 1], (double)facetHits->nbMCHit, false);
 				}
 				break;
 			}
 			case 1: { //Equiv Hits
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-					v->Add(worker->moments[m - 1], facetHits->hit.nbHitEquiv, false);
+					v->Add(worker->moments[m - 1], facetHits->nbHitEquiv, false);
 				}
 				break;
 			}
@@ -509,7 +509,7 @@ void PressureEvolution::refreshChart() {
 				if (f->sh.is2sided) scaleY *= 0.5;
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-					v->Add(worker->moments[m - 1], facetHits->hit.sum_v_ort*scaleY, false);
+					v->Add(worker->moments[m - 1], facetHits->sum_v_ort*scaleY, false);
 				}
 				break;
 			}
@@ -519,7 +519,7 @@ void PressureEvolution::refreshChart() {
 				scaleY *= f->DensityCorrection();
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-					v->Add(worker->moments[m - 1], facetHits->hit.sum_1_per_ort_velocity*scaleY, false);
+					v->Add(worker->moments[m - 1], facetHits->sum_1_per_ort_velocity*scaleY, false);
 				}
 				break;
 			}
@@ -528,7 +528,7 @@ void PressureEvolution::refreshChart() {
 				scaleY *= worker->wp.totalDesorbedMolecules / worker->wp.timeWindowSize;
 				for (size_t m = 1; m <= Min(worker->moments.size(), (size_t)10000); m++) { //max 10000 points
 					FacetHitBuffer* facetHits = (FacetHitBuffer*)(buffer + f->sh.hitOffset + m * sizeof(FacetHitBuffer));
-					v->Add(worker->moments[m - 1], facetHits->hit.nbHitEquiv*scaleY, false);
+					v->Add(worker->moments[m - 1], facetHits->nbHitEquiv*scaleY, false);
 				}
 				break;
 			}

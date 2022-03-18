@@ -374,7 +374,7 @@ void UpdateACHits(Dataport *dpHit,int prIdx,DWORD timeout) {
   gHits->texture_limits[0].max.all = 0.0;
   gHits->texture_limits[0].min.all = 0.0;
   //sHandle->wp.sMode = AC_MODE;
-  gHits->globalHits.hit.nbDesorbed = sHandle->totalDesorbed;
+  gHits->globalHits.nbDesorbed = sHandle->totalDesorbed;
 
   // Update texture
   idx = 0;
@@ -398,9 +398,9 @@ void UpdateACHits(Dataport *dpHit,int prIdx,DWORD timeout) {
       }
     }
     fHits = (FacetHitBuffer  *)((char *)dpHit->buff + f.sh.hitOffset);
-    fHits->density.value    = sumVal;
-    fHits->density.desorbed = sumDes;
-    fHits->density.absorbed = sumAbs;
+    //fHits->density.value    = sumVal;
+    //fHits->density.desorbed = sumDes;
+    //fHits->density.absorbed = sumAbs;
 
   }
 

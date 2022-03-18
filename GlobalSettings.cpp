@@ -472,7 +472,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src, int message) {
 						Facet* f;
 						for (size_t i = 0; (i < nbFacet) && (!hasCoverage); i++) {
 							f = geom->GetFacet(nbFacet-1);
-							if (f->facetHitCache.hit.covering > 0.0) {
+							if (f->facetHitCache.covering > boost::multiprecision::uint128_t(0)) {
 								hasCoverage = true;
 							}
 						}
@@ -480,9 +480,6 @@ void GlobalSettings::ProcessMessage(GLComponent *src, int message) {
 					}
 				}
 			}
-
-
-
 
 			double hl;
 			if (enableDecay->GetState() && (!halfLifeText->GetNumber(&hl) || !(hl > 0.0))) {

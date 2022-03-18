@@ -174,10 +174,10 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, size_t nbMoments, DWORD timeout) {
 	gHits = (GlobalHitBuffer *)buffer;
 
 	// Global hits and leaks: adding local hits to shared memory
-	gHits->globalHits.hit.nbMCHit += sHandle->tmpGlobalResult.globalHits.hit.nbMCHit;
-	gHits->globalHits.hit.nbHitEquiv += sHandle->tmpGlobalResult.globalHits.hit.nbHitEquiv;
-	gHits->globalHits.hit.nbAbsEquiv += sHandle->tmpGlobalResult.globalHits.hit.nbAbsEquiv;
-	gHits->globalHits.hit.nbDesorbed += sHandle->tmpGlobalResult.globalHits.hit.nbDesorbed;
+	gHits->globalHits.nbMCHit += sHandle->tmpGlobalResult.globalHits.nbMCHit;
+	gHits->globalHits.nbHitEquiv += sHandle->tmpGlobalResult.globalHits.nbHitEquiv;
+	gHits->globalHits.nbAbsEquiv += sHandle->tmpGlobalResult.globalHits.nbAbsEquiv;
+	gHits->globalHits.nbDesorbed += sHandle->tmpGlobalResult.globalHits.nbDesorbed;
 	gHits->distTraveled_total += sHandle->tmpGlobalResult.distTraveled_total;
 	gHits->distTraveledTotal_fullHitsOnly += sHandle->tmpGlobalResult.distTraveledTotal_fullHitsOnly;
 
@@ -211,7 +211,6 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, size_t nbMoments, DWORD timeout) {
 	}
 
 	//Global histograms
-	
 		for (int m = 0; m < (1 + nbMoments); m++) {
 			BYTE *histCurrentMoment = buffer + sizeof(GlobalHitBuffer) + m * sHandle->wp.globalHistogramParams.GetDataSize();
 			if (sHandle->wp.globalHistogramParams.recordBounce) {
@@ -243,14 +242,14 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, size_t nbMoments, DWORD timeout) {
 
 				for (int m = 0; m < (1 + nbMoments); m++) {
 					FacetHitBuffer *facetHitBuffer = (FacetHitBuffer *)(buffer + f.sh.hitOffset + m * sizeof(FacetHitBuffer));
-					facetHitBuffer->hit.nbAbsEquiv += f.tmpCounter[m].hit.nbAbsEquiv;
-					facetHitBuffer->hit.nbDesorbed += f.tmpCounter[m].hit.nbDesorbed;
-					facetHitBuffer->hit.nbMCHit += f.tmpCounter[m].hit.nbMCHit;
-					facetHitBuffer->hit.nbHitEquiv += f.tmpCounter[m].hit.nbHitEquiv;
-					facetHitBuffer->hit.sum_1_per_ort_velocity += f.tmpCounter[m].hit.sum_1_per_ort_velocity;
-					facetHitBuffer->hit.sum_v_ort += f.tmpCounter[m].hit.sum_v_ort;
-					facetHitBuffer->hit.sum_1_per_velocity += f.tmpCounter[m].hit.sum_1_per_velocity;
-					facetHitBuffer->hit.covering += f.tmpCounter[m].hit.covering;
+					facetHitBuffer->nbAbsEquiv += f.tmpCounter[m].nbAbsEquiv;
+					facetHitBuffer->nbDesorbed += f.tmpCounter[m].nbDesorbed;
+					facetHitBuffer->nbMCHit += f.tmpCounter[m].nbMCHit;
+					facetHitBuffer->nbHitEquiv += f.tmpCounter[m].nbHitEquiv;
+					facetHitBuffer->sum_1_per_ort_velocity += f.tmpCounter[m].sum_1_per_ort_velocity;
+					facetHitBuffer->sum_v_ort += f.tmpCounter[m].sum_v_ort;
+					facetHitBuffer->sum_1_per_velocity += f.tmpCounter[m].sum_1_per_velocity;
+					facetHitBuffer->covering += f.tmpCounter[m].covering;
 				}
 
 				if (f.sh.isProfile) {
@@ -265,7 +264,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, size_t nbMoments, DWORD timeout) {
 				if (f.sh.isTextured) {
 					for (int m = 0; m < (1 + nbMoments); m++) {
 						TextureCell *shTexture = (TextureCell *)(buffer + (f.sh.hitOffset + facetHitsSize + f.profileSize*(1 + nbMoments) + m * f.textureSize));
-						//double dCoef = gHits->globalHits.hit.nbDesorbed * 1E4 * sHandle->wp.gasMass / 1000 / 6E23 * MAGIC_CORRECTION_FACTOR;  //1E4 is conversion from m2 to cm2
+						//double dCoef = gHits->globalHits.nbDesorbed * 1E4 * sHandle->wp.gasMass / 1000 / 6E23 * MAGIC_CORRECTION_FACTOR;  //1E4 is conversion from m2 to cm2
 						double timeCorrection = m == 0 ? sHandle->wp.finalOutgassingRate : (sHandle->wp.totalDesorbedMolecules) / sHandle->wp.timeWindowSize;
 						//Timecorrection is required to compare constant flow texture values with moment values (for autoscaling)
 
@@ -494,18 +493,18 @@ void PerformTeleport(SubprocessFacet *iFacet) {
 	sHandle->currentParticle.lastHitFacet = destination;
 
 	//Count hits on teleport facets
-	/*iFacet->sh.tmpCounter.hit.nbAbsEquiv++;
-	destination->sh.tmpCounter.hit.nbDesorbed++;*/
+	/*iFacet->sh.tmpCounter.nbAbsEquiv++;
+	destination->sh.tmpCounter.nbDesorbed++;*/
 
 	double ortVelocity = sHandle->currentParticle.velocity*abs(Dot(sHandle->currentParticle.direction, iFacet->sh.N));
 	//We count a teleport as a local hit, but not as a global one since that would affect the MFP calculation
-	/*iFacet->sh.tmpCounter.hit.nbMCHit++;
-	iFacet->sh.tmpCounter.hit.sum_1_per_ort_velocity += 2.0 / ortVelocity;
-	iFacet->sh.tmpCounter.hit.sum_v_ort += 2.0*(sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
+	/*iFacet->sh.tmpCounter.nbMCHit++;
+	iFacet->sh.tmpCounter.sum_1_per_ort_velocity += 2.0 / ortVelocity;
+	iFacet->sh.tmpCounter.sum_v_ort += 2.0*(sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
 	IncreaseFacetCounter(iFacet, sHandle->currentParticle.flightTime, 1, 0, 0, 2.0 / ortVelocity, 2.0*(sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity);
 	iFacet->hitted = true;
-	/*destination->sh.tmpCounter.hit.sum_1_per_ort_velocity += 2.0 / sHandle->currentParticle.velocity;
-	destination->sh.tmpCounter.hit.sum_v_ort += sHandle->currentParticle.velocity*abs(DOT3(
+	/*destination->sh.tmpCounter.sum_1_per_ort_velocity += 2.0 / sHandle->currentParticle.velocity;
+	destination->sh.tmpCounter.sum_v_ort += sHandle->currentParticle.velocity*abs(DOT3(
 	sHandle->currentParticle.direction.x, sHandle->currentParticle.direction.y, sHandle->currentParticle.direction.z,
 	destination->sh.N.x, destination->sh.N.y, destination->sh.N.z));*/
 }
@@ -901,7 +900,7 @@ bool StartFromSource() {
 
 	src->hitted = true;
 	sHandle->totalDesorbed++;
-	sHandle->tmpGlobalResult.globalHits.hit.nbDesorbed++;
+	sHandle->tmpGlobalResult.globalHits.nbDesorbed++;
 	//sHandle->nbPHit = 0;
 
 	if (src->sh.isMoving) {
@@ -909,9 +908,9 @@ bool StartFromSource() {
 	}
 
 	double ortVelocity = sHandle->currentParticle.velocity*abs(Dot(sHandle->currentParticle.direction, src->sh.N));
-	/*src->sh.tmpCounter.hit.nbDesorbed++;
-	src->sh.tmpCounter.hit.sum_1_per_ort_velocity += 2.0 / ortVelocity; //was 2.0 / ortV
-	src->sh.tmpCounter.hit.sum_v_ort += (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
+	/*src->sh.tmpCounter.nbDesorbed++;
+	src->sh.tmpCounter.sum_1_per_ort_velocity += 2.0 / ortVelocity; //was 2.0 / ortV
+	src->sh.tmpCounter.sum_v_ort += (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
 	IncreaseFacetCounter(src, sHandle->currentParticle.flightTime, 0, 1, 0, 2.0 / ortVelocity, (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity);
 	//Desorption doesn't contribute to angular profiles, nor to angle maps
 	ProfileFacet(src, sHandle->currentParticle.flightTime, false, 2.0, 1.0); //was 2.0, 1.0
@@ -1146,8 +1145,8 @@ void PerformBounce(SubprocessFacet *iFacet) {
 
 	bool revert = false;
 
-	sHandle->tmpGlobalResult.globalHits.hit.nbMCHit++; //global
-	sHandle->tmpGlobalResult.globalHits.hit.nbHitEquiv += sHandle->currentParticle.oriRatio;
+	sHandle->tmpGlobalResult.globalHits.nbMCHit++; //global
+	sHandle->tmpGlobalResult.globalHits.nbHitEquiv += sHandle->currentParticle.oriRatio;
 
 	// Handle super structure link facet. Can be 
 	if (iFacet->sh.superDest) {
@@ -1197,9 +1196,9 @@ void PerformBounce(SubprocessFacet *iFacet) {
 	//Register (orthogonal) velocity
 	double ortVelocity = sHandle->currentParticle.velocity*abs(Dot(sHandle->currentParticle.direction, iFacet->sh.N));
 
-	/*iFacet->sh.tmpCounter.hit.nbMCHit++; //hit facet
-	iFacet->sh.tmpCounter.hit.sum_1_per_ort_velocity += 1.0 / ortVelocity;
-	iFacet->sh.tmpCounter.hit.sum_v_ort += (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
+	/*iFacet->sh.tmpCounter.nbMCHit++; //hit facet
+	iFacet->sh.tmpCounter.sum_1_per_ort_velocity += 1.0 / ortVelocity;
+	iFacet->sh.tmpCounter.sum_v_ort += (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
 
 	IncreaseFacetCounter(iFacet, sHandle->currentParticle.flightTime, 1, 0, 0, 1.0 / ortVelocity, (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity);
 	sHandle->currentParticle.nbBounces++;
@@ -1249,8 +1248,8 @@ void PerformBounce(SubprocessFacet *iFacet) {
 	//Register outgoing velocity
 	ortVelocity = sHandle->currentParticle.velocity*abs(Dot(sHandle->currentParticle.direction, iFacet->sh.N));
 
-	/*iFacet->sh.tmpCounter.hit.sum_1_per_ort_velocity += 1.0 / ortVelocity;
-	iFacet->sh.tmpCounter.hit.sum_v_ort += (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
+	/*iFacet->sh.tmpCounter.sum_1_per_ort_velocity += 1.0 / ortVelocity;
+	iFacet->sh.tmpCounter.sum_v_ort += (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity;*/
 	IncreaseFacetCounter(iFacet, sHandle->currentParticle.flightTime, 0, 0, 0, 1.0 / ortVelocity, (sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*ortVelocity);
 	if (/*iFacet->texture &&*/ iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->currentParticle.flightTime, false, 1.0, 1.0); //count again for outward velocity
 	ProfileFacet(iFacet, sHandle->currentParticle.flightTime, false, 1.0, 1.0);
@@ -1266,9 +1265,9 @@ void PerformTransparentPass(SubprocessFacet *iFacet) { //disabled, caused findin
 	/*double directionFactor = abs(DOT3(
 		sHandle->currentParticle.direction.x, sHandle->currentParticle.direction.y, sHandle->currentParticle.direction.z,
 		iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z));
-	iFacet->sh.tmpCounter.hit.nbMCHit++;
-	iFacet->sh.tmpCounter.hit.sum_1_per_ort_velocity += 2.0 / (sHandle->currentParticle.velocity*directionFactor);
-	iFacet->sh.tmpCounter.hit.sum_v_ort += 2.0*(sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*sHandle->currentParticle.velocity*directionFactor;
+	iFacet->sh.tmpCounter.nbMCHit++;
+	iFacet->sh.tmpCounter.sum_1_per_ort_velocity += 2.0 / (sHandle->currentParticle.velocity*directionFactor);
+	iFacet->sh.tmpCounter.sum_v_ort += 2.0*(sHandle->wp.useMaxwellDistribution ? 1.0 : 1.1781)*sHandle->currentParticle.velocity*directionFactor;
 	iFacet->hitted = true;
 	if (iFacet->texture && iFacet->sh.countTrans) RecordHitOnTexture(iFacet, sHandle->currentParticle.flightTime + iFacet->colDist / 100.0 / sHandle->currentParticle.velocity,
 		true, 2.0, 2.0);
@@ -1280,9 +1279,9 @@ void PerformTransparentPass(SubprocessFacet *iFacet) { //disabled, caused findin
 }
 
 void RecordAbsorb(SubprocessFacet *iFacet) {
-	sHandle->tmpGlobalResult.globalHits.hit.nbMCHit++; //global	
-	sHandle->tmpGlobalResult.globalHits.hit.nbHitEquiv += sHandle->currentParticle.oriRatio;
-	sHandle->tmpGlobalResult.globalHits.hit.nbAbsEquiv += sHandle->currentParticle.oriRatio;
+	sHandle->tmpGlobalResult.globalHits.nbMCHit++; //global	
+	sHandle->tmpGlobalResult.globalHits.nbHitEquiv += sHandle->currentParticle.oriRatio;
+	sHandle->tmpGlobalResult.globalHits.nbAbsEquiv += sHandle->currentParticle.oriRatio;
 
 	RecordHistograms(iFacet);
 
@@ -1517,19 +1516,19 @@ void IncreaseFacetCounter(SubprocessFacet *f, double time, size_t hit, size_t de
 	size_t nbMoments = sHandle->moments.size();
 	for (size_t m = 0; m <= nbMoments; m++) {
 		if (m == 0 || abs(time - sHandle->moments[m - 1]) < sHandle->wp.timeWindowSize / 2.0) {
-			f->tmpCounter[m].hit.nbMCHit += hit;
+			f->tmpCounter[m].nbMCHit += hit;
 			double hitEquiv = static_cast<double>(hit)*sHandle->currentParticle.oriRatio;
-			f->tmpCounter[m].hit.nbHitEquiv += hitEquiv;
-			f->tmpCounter[m].hit.nbDesorbed += desorb;
-			f->tmpCounter[m].hit.nbAbsEquiv += static_cast<double>(absorb)*sHandle->currentParticle.oriRatio;
-			f->tmpCounter[m].hit.sum_1_per_ort_velocity += sHandle->currentParticle.oriRatio * sum_1_per_v;
-			f->tmpCounter[m].hit.sum_v_ort += sHandle->currentParticle.oriRatio * sum_v_ort;
-			f->tmpCounter[m].hit.sum_1_per_velocity += (hitEquiv + static_cast<double>(desorb)) / sHandle->currentParticle.velocity;
+			f->tmpCounter[m].nbHitEquiv += hitEquiv;
+			f->tmpCounter[m].nbDesorbed += desorb;
+			f->tmpCounter[m].nbAbsEquiv += static_cast<double>(absorb)*sHandle->currentParticle.oriRatio;
+			f->tmpCounter[m].sum_1_per_ort_velocity += sHandle->currentParticle.oriRatio * sum_1_per_v;
+			f->tmpCounter[m].sum_v_ort += sHandle->currentParticle.oriRatio * sum_v_ort;
+			f->tmpCounter[m].sum_1_per_velocity += (hitEquiv + static_cast<double>(desorb)) / sHandle->currentParticle.velocity;
 			if(absorb>0)
-				f->tmpCounter[m].hit.covering += 1;
+				f->tmpCounter[m].covering += 1;
 			if (desorb > 0)
-				if(f->tmpCounter[m].hit.covering!=0)
-					f->tmpCounter[m].hit.covering -= 1;
+				if(f->tmpCounter[m].covering!=0)
+					f->tmpCounter[m].covering -= 1;
 
 			//Für den Fall,
 			//dass covering kleiner Null würde. Das ist aber nicht die physikalisch richtige Lösung => überlegen.

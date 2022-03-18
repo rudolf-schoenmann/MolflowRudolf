@@ -330,9 +330,9 @@ void ProfilePlotter::refreshViews() {
 			ProfileSlice *profilePtr = (ProfileSlice *)(buffer + f->sh.hitOffset + facetHitsSize + worker->displayedMoment*sizeof(ProfileSlice)*PROFILE_SIZE);
 
 			//FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->wp.hitOffset+ worker->displayedMoment*sizeof(FacetHitBuffer));
-			//double fnbHit = (double)fCount->hit.nbMCHit;
+			//double fnbHit = (double)fCount->nbMCHit;
 			//if (fnbHit == 0.0) fnbHit = 1.0;
-			if (worker->globalHitCache.globalHits.hit.nbDesorbed > 0){
+			if (worker->globalHitCache.globalHits.nbDesorbed > 0){
 
 				switch (displayMode) {
 				case 0: //Raw data
@@ -410,7 +410,7 @@ void ProfilePlotter::refreshViews() {
 		}
 		else {
 
-			if (v->userData1 == -2 && worker->globalHitCache.globalHits.hit.nbDesorbed != 0.0) {
+			if (v->userData1 == -2 && worker->globalHitCache.globalHits.nbDesorbed != 0.0) {
 
 				// Volatile profile
 				v->Reset();
@@ -420,14 +420,14 @@ void ProfilePlotter::refreshViews() {
 					if (f->sh.isVolatile) {
 						FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset+worker->displayedMoment*sizeof(FacetHitBuffer));
 						double z = geom->GetVertex(f->indices[0])->z;
-						v->Add(z,fCount->hit.nbAbsEquiv / worker->globalHitCache.globalHits.hit.nbDesorbed, false);
+						v->Add(z,fCount->nbAbsEquiv / worker->globalHitCache.globalHits.nbDesorbed, false);
 					}
 				}
 				// Last
 				Facet *f = geom->GetFacet(28);
 				FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset+worker->displayedMoment*sizeof(FacetHitBuffer));
-				double fnbAbs = fCount->hit.nbAbsEquiv;
-				v->Add(1000.0, fnbAbs / worker->globalHitCache.globalHits.hit.nbDesorbed, false);
+				double fnbAbs = fCount->nbAbsEquiv;
+				v->Add(1000.0, fnbAbs / worker->globalHitCache.globalHits.nbDesorbed, false);
 				v->CommitChange();
 
 				//v->Reset();

@@ -112,15 +112,15 @@ void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 	file->ReadKeyword("acMode"); file->ReadKeyword(":");
 	sh.countACD = file->ReadInt();
 	file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-	facetHitCache.hit.nbAbsEquiv = file->ReadDouble();
+	facetHitCache.nbAbsEquiv = file->ReadDouble();
 
 	file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-	facetHitCache.hit.nbDesorbed = file->ReadLLong();
+	facetHitCache.nbDesorbed = file->ReadLLong();
 
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
 
-	facetHitCache.hit.nbMCHit = file->ReadLLong();
-	facetHitCache.hit.nbHitEquiv = static_cast<double>(facetHitCache.hit.nbMCHit);
+	facetHitCache.nbMCHit = file->ReadLLong();
+	facetHitCache.nbHitEquiv = static_cast<double>(facetHitCache.nbMCHit);
 	if (version >= 2) {
 		// Added in GEO version 2
 		file->ReadKeyword("temperature"); file->ReadKeyword(":");
@@ -382,10 +382,10 @@ void Facet::LoadSYN(FileReader *file, int version, size_t nbVertex) {
 	sh.countTrans = false; file->ReadInt();
 	if (version >= 10) file->ReadKeyword("nbAbsEquiv");
 	else file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-	facetHitCache.hit.nbAbsEquiv = 0; file->ReadLLong();
+	facetHitCache.nbAbsEquiv = 0; file->ReadLLong();
 	if (version < 3) {
 		file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-		facetHitCache.hit.nbDesorbed = 0;
+		facetHitCache.nbDesorbed = 0;
 		file->ReadLLong();
 	}
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
@@ -393,7 +393,7 @@ void Facet::LoadSYN(FileReader *file, int version, size_t nbVertex) {
 	if (version >= 10) {
 		file->ReadKeyword("nbHitEquiv"); file->ReadKeyword(":");file->ReadLLong();
 	}
-	facetHitCache.hit.nbMCHit = 0; facetHitCache.hit.nbHitEquiv = 0.0; 
+	facetHitCache.nbMCHit = 0; facetHitCache.nbHitEquiv = 0.0; 
 	if (version >= 3) {
 		file->ReadKeyword("fluxAbs"); file->ReadKeyword(":");
 		file->ReadDouble();
@@ -427,10 +427,10 @@ void Facet::LoadTXT(FileReader *file) {
 	sh.sticking = file->ReadDouble();
 	double o = file->ReadDouble();
 	/*wp.area =*/ file->ReadDouble();
-	facetHitCache.hit.nbDesorbed = (llong)(file->ReadDouble() + 0.5);
-	facetHitCache.hit.nbMCHit = (llong)(file->ReadDouble() + 0.5);
-	facetHitCache.hit.nbHitEquiv = static_cast<double>(facetHitCache.hit.nbMCHit);
-	facetHitCache.hit.nbAbsEquiv = (double)(llong)(file->ReadDouble() + 0.5);
+	facetHitCache.nbDesorbed = (llong)(file->ReadDouble() + 0.5);
+	facetHitCache.nbMCHit = (llong)(file->ReadDouble() + 0.5);
+	facetHitCache.nbHitEquiv = static_cast<double>(facetHitCache.nbMCHit);
+	facetHitCache.nbAbsEquiv = (double)(llong)(file->ReadDouble() + 0.5);
 	sh.desorbType = (int)(file->ReadDouble() + 0.5);
 
 	// Convert opacity
@@ -497,7 +497,7 @@ void Facet::LoadTXT(FileReader *file) {
 
 	file->ReadDouble(); // Unused
 
-	if (facetHitCache.hit.nbDesorbed == 0)
+	if (facetHitCache.nbDesorbed == 0)
 		sh.desorbType = DES_NONE;
 
 	if (IsTXTLinkFacet()) {
@@ -590,9 +590,9 @@ void Facet::SaveGEO(FileWriter *file, int idx) {
 	file->Write("  countRefl:"); file->Write(sh.countRefl, "\n");
 	file->Write("  countTrans:"); file->Write(sh.countTrans, "\n");
 	file->Write("  acMode:"); file->Write(sh.countACD, "\n");
-	file->Write("  nbAbs:"); file->Write((llong)facetHitCache.hit.nbAbsEquiv, "\n");
-	file->Write("  nbDes:"); file->Write(facetHitCache.hit.nbDesorbed, "\n");
-	file->Write("  nbHit:"); file->Write((llong)facetHitCache.hit.nbMCHit, "\n");
+	file->Write("  nbAbs:"); file->Write((llong)facetHitCache.nbAbsEquiv, "\n");
+	file->Write("  nbDes:"); file->Write(facetHitCache.nbDesorbed, "\n");
+	file->Write("  nbHit:"); file->Write((llong)facetHitCache.nbMCHit, "\n");
 
 	// Version 2
 	file->Write("  temperature:"); file->Write(sh.temperature, "\n");
@@ -1170,9 +1170,9 @@ double Facet::DensityCorrection() {
 	//However, in case of desorption or sticking, the real density is not twice the "seen" density, but a bit less, therefore this reduction factor
 	//If only desorption, or only absorption, the correction factor is 0.5, if no des/abs, it's 1.0, and in between, see below
 
-	if (facetHitCache.hit.nbMCHit > 0 || facetHitCache.hit.nbDesorbed > 0) {
-		if (facetHitCache.hit.nbAbsEquiv > 0.0 || facetHitCache.hit.nbDesorbed > 0) {//otherwise save calculation time
-			return 1.0 - (facetHitCache.hit.nbAbsEquiv + (double)facetHitCache.hit.nbDesorbed) / (facetHitCache.hit.nbHitEquiv + (double)facetHitCache.hit.nbDesorbed) / 2.0;
+	if (facetHitCache.nbMCHit > 0 || facetHitCache.nbDesorbed > 0) {
+		if (facetHitCache.nbAbsEquiv > 0.0 || facetHitCache.nbDesorbed > 0) {//otherwise save calculation time
+			return 1.0 - (facetHitCache.nbAbsEquiv + (double)facetHitCache.nbDesorbed) / (facetHitCache.nbHitEquiv + (double)facetHitCache.nbDesorbed) / 2.0;
 		}
 		else return 1.0;
 	}

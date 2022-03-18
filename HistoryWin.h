@@ -22,6 +22,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 
 #include "GLApp/GLWindow.h"
 #include <vector>
+#include <boost/multiprecision/cpp_int.hpp>
+
 class GLButton;
 class GLTextField;
 class GLLabel;
@@ -38,7 +40,7 @@ class HistoryWin : public GLWindow {
 public:
 	// Construction
 	HistoryWin(Worker *w);
-	std::vector< std::pair<float, std::vector<size_t>> > pointintime_list;
+	std::vector< std::pair<float, std::vector<boost::multiprecision::uint128_t>> > pointintime_list;
 	size_t l_hist;
 
 	// Implementation
