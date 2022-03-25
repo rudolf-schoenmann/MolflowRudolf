@@ -1213,8 +1213,8 @@ void Worker::ClearHits(bool noReload) {
 	if (dpHit) {
 		AccessDataport(dpHit);
 
-		//memset(dpHit->buff, 0, geom->GetHitsSize(&moments)); //Also clears hits, leaks
-
+		memset(dpHit->buff, 0, geom->GetHitsSize(&moments)); //Also clears hits, leaks
+		/*
 		BYTE* buffer = (BYTE*)dpHit->buff;
 		GlobalHitBuffer* gHits = (GlobalHitBuffer*)buffer;
 
@@ -1381,7 +1381,7 @@ void Worker::ClearHits(bool noReload) {
 
 			}
 		}
-
+		*/
 		ReleaseDataport(dpHit);
 	}
 
