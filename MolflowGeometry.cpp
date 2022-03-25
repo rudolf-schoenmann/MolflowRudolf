@@ -2665,7 +2665,10 @@ bool MolflowGeometry::SaveXML_simustate(xml_node saveDoc, Worker *work, BYTE *bu
 			facetHitNode.append_attribute("sum_v_ort") = facetCounter->sum_v_ort;
 			facetHitNode.append_attribute("sum_1_per_v") = facetCounter->sum_1_per_ort_velocity;
 			facetHitNode.append_attribute("sum_v") = facetCounter->sum_1_per_velocity;
-			facetHitNode.append_attribute("covering") = facetCounter->covering.convert_to<llong>();
+			std::string covering_string{facetCounter->covering.str()};
+			char* cstr = new char[covering_string.length() + 1];
+			std::strcpy(cstr, covering_string.c_str());
+			facetHitNode.append_attribute("covering") = cstr;
 
 			if (f->sh.isProfile){
 				xml_node profileNode = newFacetResult.append_child("Profile");
@@ -3259,7 +3262,10 @@ bool MolflowGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit,
 					facetCounter->sum_1_per_velocity = 4.0 * Sqr(facetCounter->nbHitEquiv + static_cast<double>(facetCounter->nbDesorbed))/ facetCounter->sum_1_per_ort_velocity;
 				}
 				if (facetHitNode.attribute("covering")) {
-					facetCounter->covering = boost::multiprecision::uint128_t(facetHitNode.attribute("covering").as_llong());
+					//facetCounter->covering = boost::multiprecision::uint128_t(facetHitNode.attribute("covering").as_llong());//one looses 64 bit. Only integers in 64 bit range can be handled
+					//facetCounter->covering = boost::multiprecision::uint128_t(facetHitNode.attribute("covering").double());//better: one looses precision after the about the 15th decimal place
+					std::string covering_string = facetHitNode.attribute("covering").as_string();
+					facetCounter->covering = boost::multiprecision::uint128_t(covering_string);
 				}
 				/*
 				else {//Was soll das? Das gibt doch keinen Sinn!
