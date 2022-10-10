@@ -1887,6 +1887,10 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 			ID.push_back(std::make_pair(parameters[paramId].GetX(pos),
 			ID.back().second +
 			(parameters[paramId].GetX(pos) - parameters[paramId].GetX(pos-1))*parameters[paramId].GetY(pos)*0.100));
+		/*If I understand that correctly, the old code divided the integral into 20 steps (with
+		supperting point all lying on a straigt line, aren't they?) using the (average between supporting point)
+		trapezoidal integration. This is the same as the trapezoidal area as for the whole interval!
+		Thus, it is needless, isn't it?
 		else { //difficult case, we'll integrate by dividing to 20 equal sections
 			for (double delta = 0.05; delta < 1.0001; delta += 0.05) {
 				double delta_t = parameters[paramId].GetX(pos) - parameters[paramId].GetX(pos-1);
@@ -1896,6 +1900,13 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 					ID.back().second +
 					0.05*delta_t*avg_value));
 			}
+		}
+		*/
+		else{
+			double avg_value = (parameters[paramId].GetY(pos) + parameters[paramId].GetY(pos-1)) * 0.100 / 2.0;
+			ID.push_back(std::make_pair(parameters[paramId].GetX(pos),
+			ID.back().second +
+			(parameters[paramId].GetX(pos) - parameters[paramId].GetX(pos - 1)) * avg_value * 0.100));
 		}
 	}
 	/* => old Molflow+ code with moments
