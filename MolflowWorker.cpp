@@ -1875,18 +1875,12 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 	//Construct integral from 0 to latest moment
 	size_t last_index = parameters[paramId].GetSize() - 1;		 
 	double last_moment = parameters[paramId].GetX(last_index);
-	//Zero
-	ID.push_back(std::make_pair(0.0, 0.0));
-
+	
 	//First moment
-	if (parameters[paramId].GetX(0) == 0) {//if first moment == 0
-		//=> we skip that (and do nothing here).
-		//otherwise we would have created one additional pair of (0 0).
-	}
-	else {
-		ID.push_back(std::make_pair(parameters[paramId].GetX(0),
-		parameters[paramId].GetX(0) * parameters[paramId].GetY(0) * 0.100)); //for the first moment (0.1: mbar*l/s -> Pa*m3/s)
-	}
+	
+		ID.push_back(std::make_pair(parameters[paramId].GetX(0), 0.0));
+		// Conversion factor for every Y value: (0.1: mbar*l/s -> Pa*m3/s)
+	
 	//Intermediate moments
 	for (size_t pos = 1; pos <= last_index; pos++) {
 		if (IsEqual(parameters[paramId].GetY(pos) , parameters[paramId].GetY(pos-1))) //two equal values follow, simple integration by multiplying
