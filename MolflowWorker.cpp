@@ -1906,7 +1906,7 @@ std::vector<std::pair<double, double>> Worker::Generate_ID(int paramId){
 			double avg_value = (parameters[paramId].GetY(pos) + parameters[paramId].GetY(pos-1)) * 0.100 / 2.0;
 			ID.push_back(std::make_pair(parameters[paramId].GetX(pos),
 			ID.back().second +
-			(parameters[paramId].GetX(pos) - parameters[paramId].GetX(pos - 1)) * avg_value * 0.100));
+			(parameters[paramId].GetX(pos) - parameters[paramId].GetX(pos - 1)) * avg_value));
 		}
 	}
 	/* => old Molflow+ code with moments
